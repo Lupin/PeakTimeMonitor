@@ -9,6 +9,8 @@ settings:
   base:
     SWIFT_VERSION: "5.0"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
+    CODE_SIGN_IDENTITY: ""
+    CODE_SIGN_STYLE: Manual
 
 targets:
   PeakTimeMonitor:
@@ -23,8 +25,6 @@ targets:
         PRODUCT_NAME: PeakTimeMonitor
         GENERATE_INFOPLIST_FILE: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        CODE_SIGN_STYLE: Manual
-        CODE_SIGN_IDENTITY: ""
         ENABLE_HARDENED_RUNTIME: YES
         CURRENT_PROJECT_VERSION: 1
         MARKETING_VERSION: "1.0"
@@ -32,10 +32,6 @@ targets:
       path: PeakTimeMonitorApp/PeakTimeMonitor.entitlements
     dependencies:
       - target: PeakTimeWidget
-    preBuildScripts:
-      - name: "Clean xattr from assets"
-        script: |
-          xattr -cr "${SRCROOT}/PeakTimeMonitorApp/Assets.xcassets" 2>/dev/null || true
 
   PeakTimeWidget:
     type: app-extension
@@ -48,8 +44,6 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.gael.peaktime.widget
         PRODUCT_NAME: PeakTimeWidget
         GENERATE_INFOPLIST_FILE: YES
-        CODE_SIGN_STYLE: Manual
-        CODE_SIGN_IDENTITY: ""
         SKIP_INSTALL: YES
         CURRENT_PROJECT_VERSION: 1
         MARKETING_VERSION: "1.0"
