@@ -12,8 +12,12 @@ final class FeuViewModel: ObservableObject {
 
     init() {
         refresh()
-        // Recharger quand les UserDefaults changent (ex: Preferences modifiées)
-        NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: defaults, queue: .main) { [weak self] _ in
+        // Recharger quand les prefs sont modifiées (notification inter-process)
+        DistributedNotificationCenter.default().addObserver(forName: NSNotification.Name("PeakTimeSlotsChanged"), object: nil, queue: .main) { [weak self] _ in
+            self?.refresh()
+        }
+        // Aussi au focus de la fenêtre
+        NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
             self?.refresh()
         }
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
@@ -35,7 +39,7 @@ final class FeuViewModel: ObservableObject {
         let cal = Calendar.current
         let weekday = cal.component(.weekday, from: now)
         let cur = cal.component(.hour, from: now) * 60 + cal.component(.minute, from: now)
-        let today = slots.filter { $0.weekday == weekday }.sorted { ($0.startHour*60+$0.startMinute) < ($1.startHour*60+$1.startMinute) }
+        let today = slots.filter { $0.weekday == weekday || ($0.weekday == 0 && weekday >= 2 && weekday <= 6) }.sorted { ($0.startHour*60+$0.startMinute) < ($1.startHour*60+$1.startMinute) }
         var next: PeakTimeSlot?, minD = Int.max
         for s in today { let d = (s.startHour*60+s.startMinute)-cur; if d>0 && d<minD { minD=d; next=s } }
         if let n = next {

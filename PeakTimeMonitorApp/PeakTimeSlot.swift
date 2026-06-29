@@ -1,9 +1,9 @@
 import Foundation
 
 /// Represents a peak time slot for a specific weekday.
-/// weekday: 1 = Sunday, 2 = Monday, ..., 7 = Saturday (Calendar.Component.weekday convention)
+/// weekday: 0 = all weekdays (Mon-Fri), 1 = Sunday, 2 = Monday, ..., 7 = Saturday
 public struct PeakTimeSlot: Codable, Equatable, Sendable {
-    public var weekday: Int       // 1-7
+    public var weekday: Int       // 0-7 (0 = all weekdays)
     public var startHour: Int     // 0-23
     public var startMinute: Int   // 0-59
     public var endHour: Int       // 0-23
@@ -51,8 +51,8 @@ public extension PeakTimeSlot {
         let minute = calendar.component(.minute, from: now)
         let currentMinutes = hour * 60 + minute
 
-        // Filter slots for today's weekday
-        let todaySlots = slots.filter { $0.weekday == weekday }
+        // Filter slots for today: weekday match OR weekday==0 (all weekdays Mon-Fri)
+        let todaySlots = slots.filter { $0.weekday == weekday || ($0.weekday == 0 && weekday >= 2 && weekday <= 6) }
 
         // Check if we're inside an active peak
         for slot in todaySlots {
