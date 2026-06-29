@@ -3,11 +3,11 @@ import Foundation
 /// Represents a peak time slot for a specific weekday.
 /// weekday: 1 = Sunday, 2 = Monday, ..., 7 = Saturday (Calendar.Component.weekday convention)
 public struct PeakTimeSlot: Codable, Equatable, Sendable {
-    public let weekday: Int       // 1-7
-    public let startHour: Int     // 0-23
-    public let startMinute: Int   // 0-59
-    public let endHour: Int       // 0-23
-    public let endMinute: Int     // 0-59
+    public var weekday: Int       // 1-7
+    public var startHour: Int     // 0-23
+    public var startMinute: Int   // 0-59
+    public var endHour: Int       // 0-23
+    public var endMinute: Int     // 0-59
 
     public init(weekday: Int, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int) {
         self.weekday = weekday
