@@ -27,6 +27,15 @@ let package = Package(
             name: "TestRunner",
             dependencies: ["PeakTimeMonitorLib"],
             path: "Tests/TestRunner"
+        ),
+        .target(
+            name: "PeakTimeWidget",
+            dependencies: ["PeakTimeMonitorLib"],
+            path: "PeakTimeWidget",
+            exclude: ["Info.plist"],
+            swiftSettings: [
+                .unsafeFlags(["-application-extension"])
+            ]
         )
     ]
 )
