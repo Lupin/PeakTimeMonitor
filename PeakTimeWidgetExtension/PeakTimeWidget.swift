@@ -32,20 +32,20 @@ struct PeakTimeSlot: Codable, Equatable {
         }
     }()
 
-    static func currentState(slots: [PeakTimeSlot]) -> FeuState {
+    static func currentState(slots: [PeakTimeSlot], orangeMinutes: Int = 15) -> FeuState {
         let now = Date()
         let calendar = Calendar.current
         let weekday = calendar.component(.weekday, from: now)
         let currentMinutes = calendar.component(.hour, from: now) * 60 + calendar.component(.minute, from: now)
 
-        for slot in slots where slot.weekday == weekday {
+        for slot in slots where slot.weekday == weekday || (slot.weekday == 0 && weekday >= 2 && weekday <= 6) {
             let start = slot.startHour * 60 + slot.startMinute
             let end = slot.endHour * 60 + slot.endMinute
             if currentMinutes >= start && currentMinutes < end { return .red }
         }
-        for slot in slots where slot.weekday == weekday {
+        for slot in slots where slot.weekday == weekday || (slot.weekday == 0 && weekday >= 2 && weekday <= 6) {
             let diff = (slot.startHour * 60 + slot.startMinute) - currentMinutes
-            if diff > 0 && diff <= 15 { return .orange }
+            if diff > 0 && diff <= orangeMinutes { return .orange }
         }
         return .green
     }
@@ -101,7 +101,8 @@ struct PeakTimeProvider: TimelineProvider {
     private func currentFeuState() -> FeuState {
         let defaults = UserDefaults(suiteName: "group.peakmonitor")
         let slots = defaults?.peakTimeSlots ?? PeakTimeSlot.defaultSlots
-        return PeakTimeSlot.currentState(slots: slots)
+        let orangeMin = defaults?.integer(forKey: "orangeMinutes") ?? 15
+        return PeakTimeSlot.currentState(slots: slots, orangeMinutes: orangeMin > 0 ? orangeMin : 15)
     }
 }
 
