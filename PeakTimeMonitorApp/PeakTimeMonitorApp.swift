@@ -13,11 +13,11 @@ struct PeakTimeMonitorApp: App {
     var body: some Scene {
         WindowGroup {
             FeuTricoloreView()
-                .frame(minWidth: 280, idealWidth: 300, maxWidth: 400,
-                       minHeight: 360, idealHeight: 400, maxHeight: 500)
+                .frame(minWidth: 130, maxWidth: 140,
+                       minHeight: 140, maxHeight: 155)
         }
         .windowResizability(.contentSize)
-        .defaultSize(width: 300, height: 400)
+        .defaultSize(width: 135, height: 145)
         .windowStyle(.titleBar)
 
         Settings {

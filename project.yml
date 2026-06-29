@@ -32,6 +32,11 @@ targets:
       path: PeakTimeMonitorApp/PeakTimeMonitor.entitlements
     dependencies:
       - target: PeakTimeWidget
+    postCompileScripts:
+      - name: "Strip xattr from app bundle"
+        script: |
+          xattr -cr "${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}" 2>/dev/null || true
+        basedOnDependencyAnalysis: false
 
   PeakTimeWidget:
     type: app-extension
