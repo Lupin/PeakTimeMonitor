@@ -14,11 +14,11 @@ final class FeuViewModel: ObservableObject {
         refresh()
         // Recharger quand les prefs sont modifiées (notification inter-process)
         DistributedNotificationCenter.default().addObserver(forName: NSNotification.Name("PeakTimeSlotsChanged"), object: nil, queue: .main) { [weak self] _ in
-            self?.refresh()
+            Task { @MainActor in self?.refresh() }
         }
         // Aussi au focus de la fenêtre
         NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.refresh()
+            Task { @MainActor in self?.refresh() }
         }
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refresh() }
