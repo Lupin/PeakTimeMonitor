@@ -1,11 +1,11 @@
 import SwiftUI
 
-// MARK: - Time slot helpers (30 min increments)
+// MARK: - Time slot helpers (15 min increments)
 
-fileprivate let timeLabels: [String] = (0..<48).map { i in String(format: "%02d:%02d", i/2, (i%2)*30) }
-fileprivate func timeSlot(_ idx: Int) -> (hour: Int, min: Int) { (idx/2, (idx%2)*30) }
+fileprivate let timeLabels: [String] = (0..<96).map { i in String(format: "%02d:%02d", i/4, (i%4)*15) }
+fileprivate func timeSlot(_ idx: Int) -> (hour: Int, min: Int) { (idx/4, (idx%4)*15) }
 fileprivate func timeIdx(hour: Int, minute: Int) -> Int {
-    min(max(hour * 2 + (minute >= 30 ? 1 : 0), 0), 47)
+    min(max(hour * 4 + minute / 15, 0), 95)
 }
 
 // MARK: - Day helpers
@@ -41,7 +41,7 @@ struct MenuTimePicker: View {
 
     var body: some View {
         Menu {
-            ForEach(0..<48, id: \.self) { i in
+            ForEach(0..<96, id: \.self) { i in
                 Button {
                     hour = timeSlot(i).hour
                     minute = timeSlot(i).min
@@ -70,10 +70,10 @@ struct MenuDayPicker: View {
             }
         } label: {
             Text(dayLabel(weekday))
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .menuStyle(.borderlessButton)
-        .frame(width: colDay)
+        .frame(width: colDay, alignment: .trailing)
         .fixedSize()
     }
 }
