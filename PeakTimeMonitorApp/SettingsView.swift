@@ -1,5 +1,21 @@
 import SwiftUI
 
+// MARK: - Time slot helpers
+
+/// 48 slots de 30 minutes : "00:00", "00:30", "01:00", ... "23:30"
+fileprivate let timeSlots: [(label: String, hour: Int, min: Int)] = {
+    (0..<48).map { i in
+        let h = i / 2
+        let m = (i % 2) * 30
+        return (String(format: "%02d:%02d", h, m), h, m)
+    }
+}()
+
+fileprivate func timeIndex(hour: Int, minute: Int) -> Int {
+    let idx = hour * 2 + (minute >= 30 ? 1 : 0)
+    return min(max(idx, 0), 47)
+}
+
 // MARK: - Weekday helpers
 
 extension PeakTimeSlot {
@@ -16,8 +32,8 @@ extension PeakTimeSlot {
 // MARK: - Add sheet
 
 struct AddSlotSheet: View {
-    @State private var startHour = 8; @State private var startMin = 0
-    @State private var endHour = 12; @State private var endMin = 0
+    @State private var startIndex = timeIndex(hour: 8, minute: 0)
+    @State private var endIndex = timeIndex(hour: 12, minute: 0)
     @State private var isAllWeekdays = true
     @State private var selectedWeekday = 2
 
@@ -39,56 +55,44 @@ struct AddSlotSheet: View {
                 .frame(width: 120)
             }
 
-            HStack(spacing: 6) {
-                TimePicker(hour: $startHour, minute: $startMin)
+            HStack(spacing: 8) {
+                Picker("Début", selection: $startIndex) {
+                    ForEach(0..<48, id: \.self) { i in
+                        Text(timeSlots[i].label)
+                            .tag(i)
+                            .font(.system(size: 12, design: .monospaced))
+                    }
+                }
+                .frame(width: 65)
+                .clipped()
+
                 Text("–").font(.system(size: 14)).foregroundColor(.secondary)
-                TimePicker(hour: $endHour, minute: $endMin)
+
+                Picker("Fin", selection: $endIndex) {
+                    ForEach(0..<48, id: \.self) { i in
+                        Text(timeSlots[i].label)
+                            .tag(i)
+                            .font(.system(size: 12, design: .monospaced))
+                    }
+                }
+                .frame(width: 65)
+                .clipped()
             }
 
             HStack(spacing: 10) {
                 Button("Annuler") { dismiss() }
                 Button("Ajouter") {
+                    let s = timeSlots[startIndex], e = timeSlots[endIndex]
                     onAdd(PeakTimeSlot(weekday: isAllWeekdays ? 0 : selectedWeekday,
-                                       startHour: startHour, startMinute: startMin,
-                                       endHour: endHour, endMinute: endMin))
+                                       startHour: s.hour, startMinute: s.min,
+                                       endHour: e.hour, endMinute: e.min))
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
             }
         }
         .padding()
-        .frame(width: 320, height: 250)
-    }
-}
-
-// MARK: - Reusable time picker (two compact Pickers)
-
-struct TimePicker: View {
-    @Binding var hour: Int
-    @Binding var minute: Int
-
-    var body: some View {
-        HStack(spacing: 2) {
-            Picker("", selection: $hour) {
-                ForEach(0...23, id: \.self) { h in
-                    Text(String(format: "%02d", h)).tag(h)
-                        .font(.system(size: 11, design: .monospaced))
-                }
-            }
-            .frame(width: 44)
-            .labelsHidden()
-
-            Text(":").font(.system(size: 11, design: .monospaced)).foregroundColor(.secondary)
-
-            Picker("", selection: $minute) {
-                ForEach(0...59, id: \.self) { m in
-                    Text(String(format: "%02d", m)).tag(m)
-                        .font(.system(size: 11, design: .monospaced))
-                }
-            }
-            .frame(width: 44)
-            .labelsHidden()
-        }
+        .frame(width: 300, height: 260)
     }
 }
 
@@ -122,7 +126,7 @@ public struct SettingsView: View {
                 List {
                     ForEach(slots.indices, id: \.self) { i in
                         if isEditing {
-                            SlotEditRow(slot: $slots[i]) {
+                            EditSlotRow(slot: $slots[i]) {
                                 slots.remove(at: i)
                             }
                         } else {
@@ -148,9 +152,7 @@ public struct SettingsView: View {
                     }
                     .buttonStyle(.bordered).controlSize(.small)
                 }
-
                 Spacer()
-
                 Button("Réinitialiser") {
                     slots = PeakTimeSlot.defaultSlots
                     isEditing = false
@@ -180,20 +182,17 @@ public struct SettingsView: View {
     }
 }
 
-// MARK: - Slot edit row (inline editing)
+// MARK: - Edit row
 
-struct SlotEditRow: View {
+struct EditSlotRow: View {
     @Binding var slot: PeakTimeSlot
     let onDelete: () -> Void
 
-    @State private var isAllWeekdays: Bool = true
-    @State private var selectedWeekday = 2
-    @State private var startH = 8; @State private var startM = 0
-    @State private var endH = 12; @State private var endM = 0
+    @State private var startIdx: Int = 0
+    @State private var endIdx: Int = 0
 
     var body: some View {
         HStack(spacing: 8) {
-            // Delete button on the left (Apple HIG standard)
             Button { onDelete() } label: {
                 Image(systemName: "minus.circle.fill")
                     .foregroundColor(.gray)
@@ -201,27 +200,47 @@ struct SlotEditRow: View {
             }
             .buttonStyle(.plain)
 
-            // Day
             Text(slot.weekdayName)
                 .frame(width: 70, alignment: .leading)
                 .font(.system(size: 12, weight: .medium))
 
-            // Time pickers
-            TimePicker(hour: $startH, minute: $startM)
+            Picker("", selection: $startIdx) {
+                ForEach(0..<48, id: \.self) { i in
+                    Text(timeSlots[i].label)
+                        .font(.system(size: 11, design: .monospaced))
+                        .tag(i)
+                }
+            }
+            .frame(width: 60)
+            .clipped()
+
             Text("–").font(.system(size: 11)).foregroundColor(.secondary)
-            TimePicker(hour: $endH, minute: $endM)
+
+            Picker("", selection: $endIdx) {
+                ForEach(0..<48, id: \.self) { i in
+                    Text(timeSlots[i].label)
+                        .font(.system(size: 11, design: .monospaced))
+                        .tag(i)
+                }
+            }
+            .frame(width: 60)
+            .clipped()
 
             Spacer()
         }
         .padding(.vertical, 2)
         .onAppear {
-            startH = slot.startHour; startM = slot.startMinute
-            endH = slot.endHour; endM = slot.endMinute
+            startIdx = timeIndex(hour: slot.startHour, minute: slot.startMinute)
+            endIdx = timeIndex(hour: slot.endHour, minute: slot.endMinute)
         }
-        .onChange(of: startH) { _ in slot.startHour = startH }
-        .onChange(of: startM) { _ in slot.startMinute = startM }
-        .onChange(of: endH) { _ in slot.endHour = endH }
-        .onChange(of: endM) { _ in slot.endMinute = endM }
+        .onChange(of: startIdx) { _ in
+            let s = timeSlots[startIdx]
+            slot.startHour = s.hour; slot.startMinute = s.min
+        }
+        .onChange(of: endIdx) { _ in
+            let e = timeSlots[endIdx]
+            slot.endHour = e.hour; slot.endMinute = e.min
+        }
     }
 }
 
