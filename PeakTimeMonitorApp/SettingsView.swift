@@ -28,13 +28,16 @@ extension PeakTimeSlot {
     }
 }
 
-// MARK: - Layout constants (shared widths so edit & read mode align)
+// MARK: - Layout constants
 
-fileprivate let colDay: CGFloat     = 110
-fileprivate let colTime: CGFloat    = 52
-fileprivate let colDash: CGFloat    = 16
+fileprivate let rowHeight: CGFloat   = 28
+fileprivate let delW: CGFloat       = 24   // delete button
+fileprivate let gap: CGFloat        = 8    // space between columns
+fileprivate let colDay: CGFloat     = 110  // day label
+fileprivate let colTime: CGFloat    = 52   // HH:MM picker
+fileprivate let colDash: CGFloat    = 12   // "–"
 
-// MARK: - Time Picker (Menu-based, fixed width)
+// MARK: - Time Picker
 
 struct MenuTimePicker: View {
     @Binding var hour: Int
@@ -47,8 +50,7 @@ struct MenuTimePicker: View {
                     hour = timeSlot(i).hour
                     minute = timeSlot(i).min
                 } label: {
-                    Text(timeLabels[i])
-                        .font(.system(size: 13, design: .monospaced))
+                    Text(timeLabels[i]).font(.system(size: 13, design: .monospaced))
                 }
             }
         } label: {
@@ -78,21 +80,83 @@ struct MenuDayPicker: View {
     }
 }
 
-// MARK: - Read-only slot label (same layout as edit row)
+// MARK: - Table row (shared layout read + edit)
 
-struct SlotLabel: View {
-    let slot: PeakTimeSlot
+/// Une ligne de tableau : les colonnes sont toujours présentes mais
+/// en lecture le bouton delete est invisible (pas juste caché → même espace).
+struct SlotTableRow: View {
+    @Binding var slot: PeakTimeSlot
+    let isEditing: Bool
+    let onDelete: (() -> Void)?
+
+    @State private var weekday: Int = 0
+    @State private var startH = 8; @State private var startM = 0
+    @State private var endH = 12; @State private var endM = 0
+
+    init(slot: Binding<PeakTimeSlot>, isEditing: Bool, onDelete: (() -> Void)? = nil) {
+        self._slot = slot
+        self.isEditing = isEditing
+        self.onDelete = onDelete
+    }
 
     var body: some View {
-        HStack(spacing: 0) {
-            Text(slot.weekdayName)
-                .frame(width: colDay, alignment: .leading)
-            Text(slot.timeRangeFormatted)
-                .frame(width: colTime + colDash + colTime, alignment: .center)
-                .font(.system(size: 13, design: .monospaced))
-                .offset(x: -8) // compensate for dash width
+        HStack(spacing: gap) {
+            // Colonne 0 : bouton delete (ou espace réservé)
+            if isEditing {
+                Button { onDelete?() } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .foregroundColor(.gray).font(.system(size: 16))
+                }
+                .buttonStyle(.plain)
+                .frame(width: delW)
+            } else {
+                Spacer().frame(width: delW)
+            }
+
+            // Colonne 1 : jour
+            if isEditing {
+                MenuDayPicker(weekday: $weekday)
+            } else {
+                Text(slot.weekdayName)
+                    .frame(width: colDay, alignment: .leading)
+            }
+
+            // Colonne 2 : heure début
+            if isEditing {
+                MenuTimePicker(hour: $startH, minute: $startM)
+            } else {
+                Text(String(format: "%02d:%02d", slot.startHour, slot.startMinute))
+                    .font(.system(size: 13, design: .monospaced))
+                    .frame(width: colTime, alignment: .center)
+            }
+
+            // Colonne 3 : tiret
+            Text("–")
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+                .frame(width: colDash, alignment: .center)
+
+            // Colonne 4 : heure fin
+            if isEditing {
+                MenuTimePicker(hour: $endH, minute: $endM)
+            } else {
+                Text(String(format: "%02d:%02d", slot.endHour, slot.endMinute))
+                    .font(.system(size: 13, design: .monospaced))
+                    .frame(width: colTime, alignment: .center)
+            }
         }
-        .font(.system(size: 12))
+        .frame(height: rowHeight)
+        .font(.system(size: 13))
+        .onAppear {
+            weekday = slot.weekday
+            startH = slot.startHour; startM = slot.startMinute
+            endH = slot.endHour; endM = slot.endMinute
+        }
+        .onChange(of: weekday) { _, _ in slot.weekday = weekday }
+        .onChange(of: startH) { _, _ in slot.startHour = startH }
+        .onChange(of: startM) { _, _ in slot.startMinute = startM }
+        .onChange(of: endH) { _, _ in slot.endHour = endH }
+        .onChange(of: endM) { _, _ in slot.endMinute = endM }
     }
 }
 
@@ -161,11 +225,11 @@ public struct SettingsView: View {
             } else {
                 List {
                     ForEach(slots.indices, id: \.self) { i in
-                        if isEditing {
-                            EditSlotRow(slot: $slots[i]) { slots.remove(at: i) }
-                        } else {
-                            SlotLabel(slot: slots[i])
-                        }
+                        SlotTableRow(
+                            slot: $slots[i],
+                            isEditing: isEditing,
+                            onDelete: isEditing ? { slots.remove(at: i) } : nil
+                        )
                     }
                 }
                 .listStyle(.inset)
@@ -189,7 +253,7 @@ public struct SettingsView: View {
             }
         }
         .padding()
-        .frame(minWidth: 540, minHeight: 340)
+        .frame(minWidth: 560, minHeight: 340)
         .onAppear(perform: load)
         .onDisappear { if isEditing { isEditing = false; saveAndNotify() } }
         .sheet(isPresented: $showAddSheet) {
@@ -206,47 +270,6 @@ public struct SettingsView: View {
         defaults.peakTimeSlots = slots
         defaults.synchronize()
         DistributedNotificationCenter.default().postNotificationName(NSNotification.Name("PeakTimeSlotsChanged"), object: nil, userInfo: nil, deliverImmediately: true)
-    }
-}
-
-// MARK: - Edit row
-
-struct EditSlotRow: View {
-    @Binding var slot: PeakTimeSlot
-    let onDelete: () -> Void
-
-    @State private var weekday: Int = 0
-    @State private var startH = 8; @State private var startM = 0
-    @State private var endH = 12; @State private var endM = 0
-
-    var body: some View {
-        HStack(spacing: 0) {
-            Button { onDelete() } label: {
-                Image(systemName: "minus.circle.fill")
-                    .foregroundColor(.gray).font(.system(size: 16))
-            }
-            .buttonStyle(.plain)
-            .frame(width: 28)
-
-            MenuDayPicker(weekday: $weekday)
-
-            MenuTimePicker(hour: $startH, minute: $startM)
-            Text("–").font(.system(size: 12)).foregroundColor(.secondary).frame(width: colDash)
-            MenuTimePicker(hour: $endH, minute: $endM)
-
-            Spacer()
-        }
-        .padding(.vertical, 1)
-        .onAppear {
-            weekday = slot.weekday
-            startH = slot.startHour; startM = slot.startMinute
-            endH = slot.endHour; endM = slot.endMinute
-        }
-        .onChange(of: weekday) { _, _ in slot.weekday = weekday }
-        .onChange(of: startH) { _, _ in slot.startHour = startH }
-        .onChange(of: startM) { _, _ in slot.startMinute = startM }
-        .onChange(of: endH) { _, _ in slot.endHour = endH }
-        .onChange(of: endM) { _, _ in slot.endMinute = endM }
     }
 }
 
