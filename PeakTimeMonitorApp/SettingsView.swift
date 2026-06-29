@@ -1,141 +1,123 @@
 import SwiftUI
 
-// MARK: - Time slot helpers (30 min increments)
-
-fileprivate let timeLabels: [String] = (0..<48).map { i in String(format: "%02d:%02d", i/2, (i%2)*30) }
-fileprivate func timeSlot(_ idx: Int) -> (hour: Int, min: Int) { (idx/2, (idx%2)*30) }
-fileprivate func timeIdx(hour: Int, minute: Int) -> Int {
-    min(max(hour * 2 + (minute >= 30 ? 1 : 0), 0), 47)
-}
-
 // MARK: - Day helpers
 
-fileprivate let allDays: [(label: String, value: Int)] = [
-    ("Tous les jours", 0),
-    ("Lundi", 2), ("Mardi", 3), ("Mercredi", 4),
-    ("Jeudi", 5), ("Vendredi", 6), ("Samedi", 7),
-    ("Dimanche", 1)
+fileprivate let allDays: [(String, Int)] = [
+    ("Tous les jours", 0), ("Lundi", 2), ("Mardi", 3), ("Mercredi", 4),
+    ("Jeudi", 5), ("Vendredi", 6), ("Samedi", 7), ("Dimanche", 1)
 ]
 
 fileprivate func dayLabel(_ w: Int) -> String {
-    allDays.first { $0.value == w }?.label ?? "?"
+    allDays.first(where: { $0.1 == w })?.0 ?? "?"
 }
 
-// MARK: - Layout constants
+// MARK: - Extension
 
-fileprivate let delW: CGFloat   = 24
-fileprivate let colDay: CGFloat = 110
-fileprivate let colTime: CGFloat = 56
-fileprivate let colDash: CGFloat = 14
+extension PeakTimeSlot {
+    var weekdayName: String { dayLabel(weekday) }
+    var timeRangeFormatted: String {
+        String(format: "%02d:%02d – %02d:%02d", startHour, startMinute, endHour, endMinute)
+    }
+}
 
-// MARK: - Table row
+// MARK: - Time steppers
 
-struct SlotTableRow: View {
-    @Binding var slot: PeakTimeSlot
-    let isEditing: Bool
-    let onDelete: (() -> Void)?
+fileprivate struct TimeStepper: View {
+    @Binding var hour: Int
+    @Binding var minute: Int
 
-    @State private var weekday: Int = 0
-    @State private var startIdx = timeIdx(hour: 8, minute: 0)
-    @State private var endIdx   = timeIdx(hour: 12, minute: 0)
+    var body: some View {
+        HStack(spacing: 2) {
+            Stepper("", value: $hour, in: 0...23)
+                .labelsHidden()
+                .scaleEffect(0.7)
+            Text(String(format: "%02d", hour))
+                .font(.system(size: 12, design: .monospaced))
+                .frame(width: 20)
+            Text(":")
+                .font(.system(size: 11)).foregroundColor(.secondary)
+            Stepper("", value: $minute, in: 0...30, step: 30)
+                .labelsHidden()
+                .scaleEffect(0.7)
+            Text(String(format: "%02d", minute))
+                .font(.system(size: 12, design: .monospaced))
+                .frame(width: 20)
+        }
+    }
+}
+
+// MARK: - Read row
+
+fileprivate struct ReadRow: View {
+    let slot: PeakTimeSlot
 
     var body: some View {
         HStack(spacing: 0) {
-            // Delete button (or spacer)
-            if isEditing {
-                Button { onDelete?() } label: {
-                    Image(systemName: "minus.circle.fill")
-                        .foregroundColor(.gray).font(.system(size: 16))
-                }
-                .buttonStyle(.plain)
-                .frame(width: delW)
-            } else {
-                Color.clear.frame(width: delW)
-            }
-
-            // Day
-            if isEditing {
-                Picker("", selection: $weekday) {
-                    ForEach(allDays, id: \.value) { d in
-                        Text(d.label).tag(d.value)
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-                .frame(width: colDay)
-                .clipped()
-            } else {
-                Text(dayLabel(slot.weekday))
-                    .frame(width: colDay, alignment: .leading)
-            }
-
-            // Time start
-            if isEditing {
-                Picker("", selection: $startIdx) {
-                    ForEach(0..<48, id: \.self) { i in
-                        Text(timeLabels[i])
-                            .font(.system(size: 12, design: .monospaced))
-                            .tag(i)
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-                .frame(width: colTime)
-                .clipped()
-            } else {
-                Text(String(format: "%02d:%02d", slot.startHour, slot.startMinute))
-                    .font(.system(size: 13, design: .monospaced))
-                    .frame(width: colTime, alignment: .center)
-            }
-
-            // Dash
-            Text("–")
-                .font(.system(size: 13))
+            Text(slot.weekdayName)
+                .frame(width: 100, alignment: .leading)
+            Text(String(format: "%02d:%02d", slot.startHour, slot.startMinute))
+                .font(.system(size: 12, design: .monospaced))
+                .frame(width: 44, alignment: .trailing)
+            Text(" – ")
+                .font(.system(size: 12))
                 .foregroundColor(.secondary)
-                .frame(width: colDash, alignment: .center)
-
-            // Time end
-            if isEditing {
-                Picker("", selection: $endIdx) {
-                    ForEach(0..<48, id: \.self) { i in
-                        Text(timeLabels[i])
-                            .font(.system(size: 12, design: .monospaced))
-                            .tag(i)
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-                .frame(width: colTime)
-                .clipped()
-            } else {
-                Text(String(format: "%02d:%02d", slot.endHour, slot.endMinute))
-                    .font(.system(size: 13, design: .monospaced))
-                    .frame(width: colTime, alignment: .center)
-            }
+            Text(String(format: "%02d:%02d", slot.endHour, slot.endMinute))
+                .font(.system(size: 12, design: .monospaced))
+                .frame(width: 44, alignment: .leading)
         }
-        .font(.system(size: 13))
-        .frame(height: 28)
+        .font(.system(size: 12))
+    }
+}
+
+// MARK: - Edit row
+
+fileprivate struct EditRow: View {
+    @Binding var slot: PeakTimeSlot
+    let onDelete: () -> Void
+
+    @State private var weekday: Int = 0
+    @State private var startH = 8; @State private var startM = 0
+    @State private var endH = 12; @State private var endM = 0
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Button { onDelete() } label: {
+                Image(systemName: "minus.circle.fill")
+                    .foregroundColor(.gray).font(.system(size: 14))
+            }
+            .buttonStyle(.plain)
+            .frame(width: 22)
+
+            Picker("", selection: $weekday) {
+                ForEach(allDays, id: \.1) { d in Text(d.0).tag(d.1) }
+            }
+            .pickerStyle(.menu).labelsHidden()
+            .frame(width: 130, alignment: .leading)
+
+            TimeStepper(hour: $startH, minute: $startM)
+            Text(" – ").font(.system(size: 11)).foregroundColor(.secondary)
+            TimeStepper(hour: $endH, minute: $endM)
+        }
+        .font(.system(size: 12))
         .onAppear {
             weekday = slot.weekday
-            startIdx = timeIdx(hour: slot.startHour, minute: slot.startMinute)
-            endIdx   = timeIdx(hour: slot.endHour, minute: slot.endMinute)
+            startH = slot.startHour; startM = slot.startMinute
+            endH = slot.endHour; endM = slot.endMinute
         }
-        .onChange(of: weekday)  { _, _ in slot.weekday = weekday }
-        .onChange(of: startIdx) { _, _ in
-            let s = timeSlot(startIdx); slot.startHour = s.hour; slot.startMinute = s.min
-        }
-        .onChange(of: endIdx) { _, _ in
-            let e = timeSlot(endIdx); slot.endHour = e.hour; slot.endMinute = e.min
-        }
+        .onChange(of: weekday) { _, _ in slot.weekday = weekday }
+        .onChange(of: startH) { _, _ in slot.startHour = startH }
+        .onChange(of: startM) { _, _ in slot.startMinute = startM }
+        .onChange(of: endH)   { _, _ in slot.endHour = endH }
+        .onChange(of: endM)   { _, _ in slot.endMinute = endM }
     }
 }
 
 // MARK: - Add sheet
 
 struct AddSlotSheet: View {
-    @State private var startIdx = timeIdx(hour: 8, minute: 0)
-    @State private var endIdx   = timeIdx(hour: 12, minute: 0)
-    @State private var weekday  = 0
+    @State private var weekday = 0
+    @State private var startH = 8; @State private var startM = 0
+    @State private var endH = 12; @State private var endM = 0
 
     let onAdd: (PeakTimeSlot) -> Void
     @Environment(\.dismiss) private var dismiss
@@ -145,55 +127,29 @@ struct AddSlotSheet: View {
             Text("Ajouter un créneau").font(.headline)
 
             Picker("Jour", selection: $weekday) {
-                ForEach(allDays, id: \.value) { d in
-                    Text(d.label).tag(d.value)
-                }
+                ForEach(allDays, id: \.1) { d in Text(d.0).tag(d.1) }
             }
-            .pickerStyle(.menu)
-            .frame(width: 160)
+            .pickerStyle(.menu).frame(width: 160)
 
             HStack(spacing: 8) {
-                Picker("Début", selection: $startIdx) {
-                    ForEach(0..<48, id: \.self) { i in
-                        Text(timeLabels[i])
-                            .font(.system(size: 14, design: .monospaced))
-                            .tag(i)
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-                .frame(width: 72)
-                .clipped()
-
-                Text("–").font(.system(size: 14)).foregroundColor(.secondary)
-
-                Picker("Fin", selection: $endIdx) {
-                    ForEach(0..<48, id: \.self) { i in
-                        Text(timeLabels[i])
-                            .font(.system(size: 14, design: .monospaced))
-                            .tag(i)
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-                .frame(width: 72)
-                .clipped()
+                TimeStepper(hour: $startH, minute: $startM)
+                Text(" – ").font(.system(size: 13)).foregroundColor(.secondary)
+                TimeStepper(hour: $endH, minute: $endM)
             }
 
             HStack(spacing: 12) {
                 Button("Annuler") { dismiss() }
                 Button("Ajouter") {
-                    let s = timeSlot(startIdx), e = timeSlot(endIdx)
                     onAdd(PeakTimeSlot(weekday: weekday,
-                                       startHour: s.hour, startMinute: s.min,
-                                       endHour: e.hour, endMinute: e.min))
+                                       startHour: startH, startMinute: startM,
+                                       endHour: endH, endMinute: endM))
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
             }
         }
         .padding()
-        .frame(width: 340, height: 220)
+        .frame(width: 360, height: 220)
     }
 }
 
@@ -224,11 +180,11 @@ public struct SettingsView: View {
             } else {
                 List {
                     ForEach(slots.indices, id: \.self) { i in
-                        SlotTableRow(
-                            slot: $slots[i],
-                            isEditing: isEditing,
-                            onDelete: isEditing ? { slots.remove(at: i) } : nil
-                        )
+                        if isEditing {
+                            EditRow(slot: $slots[i]) { slots.remove(at: i) }
+                        } else {
+                            ReadRow(slot: slots[i])
+                        }
                     }
                 }
                 .listStyle(.inset)
@@ -252,7 +208,7 @@ public struct SettingsView: View {
             }
         }
         .padding()
-        .frame(minWidth: 560, minHeight: 340)
+        .frame(minWidth: 520, minHeight: 340)
         .onAppear(perform: load)
         .onDisappear { if isEditing { isEditing = false; saveAndNotify() } }
         .sheet(isPresented: $showAddSheet) {
