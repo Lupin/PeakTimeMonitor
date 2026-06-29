@@ -70,9 +70,10 @@ struct MenuDayPicker: View {
             }
         } label: {
             Text(dayLabel(weekday))
-                .frame(width: colDay, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .menuStyle(.borderlessButton)
+        .frame(width: colDay)
         .fixedSize()
     }
 }
@@ -235,7 +236,11 @@ struct EditSlotRow: View {
             .buttonStyle(.plain)
             .frame(width: delW)
 
+            // Day — same width as read mode, Menu inside a fixed frame
             MenuDayPicker(weekday: $weekday)
+                .frame(width: colDay, alignment: .leading)
+
+            Spacer().frame(width: 4)
 
             MenuTimePicker(hour: $startH, minute: $startM)
             Text("–").font(.system(size: 13)).foregroundColor(.secondary).frame(width: colDash, alignment: .center)
