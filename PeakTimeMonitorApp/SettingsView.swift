@@ -13,77 +13,11 @@ extension PeakTimeSlot {
     }
 }
 
-// MARK: - Edit popover
-
-struct EditSlotPopover: View {
-    @Binding var slot: PeakTimeSlot
-    let onSave: () -> Void
-    @Environment(\.dismiss) private var dismiss
-
-    @State private var weekday: Int = 0
-    @State private var isAllWeekdays: Bool = true
-    @State private var startText: String = ""
-    @State private var endText: String = ""
-
-    var body: some View {
-        VStack(spacing: 14) {
-            Text("Modifier le créneau").font(.headline)
-
-            Toggle("Tous les jours (lun–ven)", isOn: $isAllWeekdays)
-
-            if !isAllWeekdays {
-                Picker("Jour", selection: $weekday) {
-                    ForEach(1...7, id: \.self) { d in
-                        Text(["", "Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"][d]).tag(d)
-                    }
-                }
-                .frame(width: 120)
-            }
-
-            HStack(spacing: 10) {
-                TextField("HH:MM", text: $startText)
-                    .frame(width: 65)
-                    .font(.system(size: 13, design: .monospaced))
-                Text("–")
-                TextField("HH:MM", text: $endText)
-                    .frame(width: 65)
-                    .font(.system(size: 13, design: .monospaced))
-            }
-
-            HStack(spacing: 10) {
-                Button("Annuler") { dismiss() }
-                Button("Enregistrer") {
-                    let s = parse(startText), e = parse(endText)
-                    slot.weekday = isAllWeekdays ? 0 : weekday
-                    slot.startHour = s.0; slot.startMinute = s.1
-                    slot.endHour = e.0; slot.endMinute = e.1
-                    onSave()
-                    dismiss()
-                }
-                .buttonStyle(.borderedProminent)
-            }
-        }
-        .padding()
-        .frame(width: 280, height: 250)
-        .onAppear {
-            isAllWeekdays = slot.weekday == 0
-            weekday = max(1, slot.weekday)
-            startText = String(format: "%02d:%02d", slot.startHour, slot.startMinute)
-            endText = String(format: "%02d:%02d", slot.endHour, slot.endMinute)
-        }
-    }
-
-    private func parse(_ t: String) -> (Int, Int) {
-        let p = t.replacingOccurrences(of: "h", with: ":").split(separator: ":").compactMap { Int($0) }
-        return p.count == 2 && p[0] >= 0 && p[0] < 24 && p[1] >= 0 && p[1] < 60 ? (p[0], p[1]) : (8, 0)
-    }
-}
-
 // MARK: - Add sheet
 
 struct AddSlotSheet: View {
-    @State private var startText = "08:00"
-    @State private var endText = "12:00"
+    @State private var startHour = 8; @State private var startMin = 0
+    @State private var endHour = 12; @State private var endMin = 0
     @State private var isAllWeekdays = true
     @State private var selectedWeekday = 2
 
@@ -105,33 +39,56 @@ struct AddSlotSheet: View {
                 .frame(width: 120)
             }
 
-            HStack(spacing: 10) {
-                TextField("HH:MM", text: $startText)
-                    .frame(width: 65)
-                    .font(.system(size: 13, design: .monospaced))
-                Text("–")
-                TextField("HH:MM", text: $endText)
-                    .frame(width: 65)
-                    .font(.system(size: 13, design: .monospaced))
+            HStack(spacing: 6) {
+                TimePicker(hour: $startHour, minute: $startMin)
+                Text("–").font(.system(size: 14)).foregroundColor(.secondary)
+                TimePicker(hour: $endHour, minute: $endMin)
             }
 
             HStack(spacing: 10) {
                 Button("Annuler") { dismiss() }
                 Button("Ajouter") {
-                    let sh = parse(startText), eh = parse(endText)
-                    onAdd(PeakTimeSlot(weekday: isAllWeekdays ? 0 : selectedWeekday, startHour: sh.0, startMinute: sh.1, endHour: eh.0, endMinute: eh.1))
+                    onAdd(PeakTimeSlot(weekday: isAllWeekdays ? 0 : selectedWeekday,
+                                       startHour: startHour, startMinute: startMin,
+                                       endHour: endHour, endMinute: endMin))
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
             }
         }
         .padding()
-        .frame(width: 280, height: 230)
+        .frame(width: 320, height: 250)
     }
+}
 
-    private func parse(_ t: String) -> (Int, Int) {
-        let p = t.replacingOccurrences(of: "h", with: ":").split(separator: ":").compactMap { Int($0) }
-        return p.count == 2 && p[0] >= 0 && p[0] < 24 && p[1] >= 0 && p[1] < 60 ? (p[0], p[1]) : (8, 0)
+// MARK: - Reusable time picker (two compact Pickers)
+
+struct TimePicker: View {
+    @Binding var hour: Int
+    @Binding var minute: Int
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Picker("", selection: $hour) {
+                ForEach(0...23, id: \.self) { h in
+                    Text(String(format: "%02d", h)).tag(h)
+                        .font(.system(size: 11, design: .monospaced))
+                }
+            }
+            .frame(width: 44)
+            .labelsHidden()
+
+            Text(":").font(.system(size: 11, design: .monospaced)).foregroundColor(.secondary)
+
+            Picker("", selection: $minute) {
+                ForEach(0...59, id: \.self) { m in
+                    Text(String(format: "%02d", m)).tag(m)
+                        .font(.system(size: 11, design: .monospaced))
+                }
+            }
+            .frame(width: 44)
+            .labelsHidden()
+        }
     }
 }
 
@@ -141,7 +98,6 @@ public struct SettingsView: View {
     @State private var slots: [PeakTimeSlot] = []
     @State private var showAddSheet = false
     @State private var isEditing = false
-    @State private var editingIndex: Int?
 
     private let defaults = UserDefaults(suiteName: "group.peakmonitor")!
 
@@ -154,7 +110,7 @@ public struct SettingsView: View {
                 Spacer()
                 Button(isEditing ? "Terminé" : "Modifier") {
                     isEditing.toggle()
-                    if !isEditing { editingIndex = nil; saveAndNotify() }
+                    if !isEditing { saveAndNotify() }
                 }
                 .buttonStyle(.bordered).controlSize(.small)
             }
@@ -166,21 +122,22 @@ public struct SettingsView: View {
                 List {
                     ForEach(slots.indices, id: \.self) { i in
                         if isEditing {
-                            SlotEditRowView(slot: $slots[i]) {
+                            SlotEditRow(slot: $slots[i]) {
                                 slots.remove(at: i)
                             }
                         } else {
                             HStack {
                                 Text(slots[i].weekdayName)
-                                    .frame(width: 60, alignment: .leading)
+                                    .frame(width: 70, alignment: .leading)
                                     .font(.system(size: 12, weight: .medium))
                                 Text(slots[i].timeRangeFormatted)
                                     .font(.system(size: 12, design: .monospaced))
+                                    .foregroundColor(.secondary)
                             }
                         }
                     }
                 }
-                .listStyle(.inset)
+                .listStyle(.inset(alternatesRowBackgrounds: true))
                 .frame(minHeight: 180)
             }
 
@@ -196,20 +153,18 @@ public struct SettingsView: View {
 
                 Button("Réinitialiser") {
                     slots = PeakTimeSlot.defaultSlots
+                    isEditing = false
                     saveAndNotify()
                 }
                 .buttonStyle(.bordered).tint(.orange).controlSize(.small)
             }
         }
         .padding()
-        .frame(minWidth: 460, minHeight: 300)
+        .frame(minWidth: 520, minHeight: 320)
         .onAppear(perform: load)
         .onDisappear { if isEditing { isEditing = false; saveAndNotify() } }
         .sheet(isPresented: $showAddSheet) {
             AddSlotSheet { s in slots.append(s); saveAndNotify() }
-        }
-        .sheet(item: $editingIndex) { index in
-            EditSlotPopover(slot: $slots[index], onSave: { saveAndNotify() })
         }
     }
 
@@ -225,67 +180,49 @@ public struct SettingsView: View {
     }
 }
 
-// MARK: - Slot row in edit mode
+// MARK: - Slot edit row (inline editing)
 
-struct SlotEditRowView: View {
+struct SlotEditRow: View {
     @Binding var slot: PeakTimeSlot
     let onDelete: () -> Void
 
-    @State private var startText: String = ""
-    @State private var endText: String = ""
+    @State private var isAllWeekdays: Bool = true
+    @State private var selectedWeekday = 2
+    @State private var startH = 8; @State private var startM = 0
+    @State private var endH = 12; @State private var endM = 0
 
     var body: some View {
         HStack(spacing: 8) {
-            // Day picker
-            Text(slot.weekdayName)
-                .frame(width: 60, alignment: .leading)
-                .font(.system(size: 12, weight: .medium))
-
-            // Time fields
-            TextField("HH:MM", text: $startText)
-                .frame(width: 55)
-                .font(.system(size: 11, design: .monospaced))
-            Text("–").font(.system(size: 11)).foregroundColor(.secondary)
-            TextField("HH:MM", text: $endText)
-                .frame(width: 55)
-                .font(.system(size: 11, design: .monospaced))
-
-            Spacer()
-
+            // Delete button on the left (Apple HIG standard)
             Button { onDelete() } label: {
                 Image(systemName: "minus.circle.fill")
-                    .foregroundColor(.red)
-                    .font(.system(size: 16))
+                    .foregroundColor(.gray)
+                    .font(.system(size: 18))
             }
             .buttonStyle(.plain)
+
+            // Day
+            Text(slot.weekdayName)
+                .frame(width: 70, alignment: .leading)
+                .font(.system(size: 12, weight: .medium))
+
+            // Time pickers
+            TimePicker(hour: $startH, minute: $startM)
+            Text("–").font(.system(size: 11)).foregroundColor(.secondary)
+            TimePicker(hour: $endH, minute: $endM)
+
+            Spacer()
         }
         .padding(.vertical, 2)
         .onAppear {
-            startText = String(format: "%02d:%02d", slot.startHour, slot.startMinute)
-            endText = String(format: "%02d:%02d", slot.endHour, slot.endMinute)
+            startH = slot.startHour; startM = slot.startMinute
+            endH = slot.endHour; endM = slot.endMinute
         }
-        .onChange(of: startText) { _ in parseStart() }
-        .onChange(of: endText) { _ in parseEnd() }
+        .onChange(of: startH) { _ in slot.startHour = startH }
+        .onChange(of: startM) { _ in slot.startMinute = startM }
+        .onChange(of: endH) { _ in slot.endHour = endH }
+        .onChange(of: endM) { _ in slot.endMinute = endM }
     }
-
-    private func parseStart() {
-        let p = startText.replacingOccurrences(of: "h", with: ":").split(separator: ":").compactMap { Int($0) }
-        if p.count == 2, p[0] >= 0 && p[0] < 24, p[1] >= 0 && p[1] < 60 {
-            slot.startHour = p[0]; slot.startMinute = p[1]
-        }
-    }
-
-    private func parseEnd() {
-        let p = endText.replacingOccurrences(of: "h", with: ":").split(separator: ":").compactMap { Int($0) }
-        if p.count == 2, p[0] >= 0 && p[0] < 24, p[1] >= 0 && p[1] < 60 {
-            slot.endHour = p[0]; slot.endMinute = p[1]
-        }
-    }
-}
-
-// Conformance for .sheet(item:)
-extension Int: @retroactive Identifiable {
-    public var id: Int { self }
 }
 
 #if DEBUG
