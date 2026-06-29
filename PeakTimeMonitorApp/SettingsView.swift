@@ -27,12 +27,11 @@ extension PeakTimeSlot {
         String(format: "%02d:%02d – %02d:%02d", startHour, startMinute, endHour, endMinute)
     }
 }
-
-// MARK: - Layout constants (shared widths so edit & read mode align)
-
-fileprivate let colDay: CGFloat     = 110
-fileprivate let colTime: CGFloat    = 52
-fileprivate let colDash: CGFloat    = 16
+fileprivate let rowHeight: CGFloat   = 28
+fileprivate let delW: CGFloat       = 28   // delete button (24 icon + 4 gap)
+fileprivate let colDay: CGFloat     = 110  // day label
+fileprivate let colTime: CGFloat    = 52   // HH:MM picker
+fileprivate let colDash: CGFloat    = 14   // "–"
 
 // MARK: - Time Picker (Menu-based, fixed width)
 
@@ -85,14 +84,22 @@ struct SlotLabel: View {
 
     var body: some View {
         HStack(spacing: 0) {
+            // Reserve space for delete button
+            Color.clear.frame(width: delW)
             Text(slot.weekdayName)
                 .frame(width: colDay, alignment: .leading)
-            Text(slot.timeRangeFormatted)
-                .frame(width: colTime + colDash + colTime, alignment: .center)
+            Text(String(format: "%02d:%02d", slot.startHour, slot.startMinute))
                 .font(.system(size: 13, design: .monospaced))
-                .offset(x: -8) // compensate for dash width
+                .frame(width: colTime, alignment: .center)
+            Text("–")
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+                .frame(width: colDash, alignment: .center)
+            Text(String(format: "%02d:%02d", slot.endHour, slot.endMinute))
+                .font(.system(size: 13, design: .monospaced))
+                .frame(width: colTime, alignment: .center)
         }
-        .font(.system(size: 12))
+        .font(.system(size: 13))
     }
 }
 
@@ -226,12 +233,12 @@ struct EditSlotRow: View {
                     .foregroundColor(.gray).font(.system(size: 16))
             }
             .buttonStyle(.plain)
-            .frame(width: 28)
+            .frame(width: delW)
 
             MenuDayPicker(weekday: $weekday)
 
             MenuTimePicker(hour: $startH, minute: $startM)
-            Text("–").font(.system(size: 12)).foregroundColor(.secondary).frame(width: colDash)
+            Text("–").font(.system(size: 13)).foregroundColor(.secondary).frame(width: colDash, alignment: .center)
             MenuTimePicker(hour: $endH, minute: $endM)
 
             Spacer()
