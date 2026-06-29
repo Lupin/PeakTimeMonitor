@@ -12,14 +12,23 @@ final class FeuViewModel: ObservableObject {
 
     init() {
         refresh()
+        // Recharger quand les UserDefaults changent (ex: Preferences modifiées)
+        NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: defaults, queue: .main) { [weak self] _ in
+            self?.refresh()
+        }
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refresh() }
         }
     }
 
-    deinit { timer?.invalidate() }
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        timer?.invalidate()
+    }
 
+    /// Appeler pour forcer un rafraîchissement (ex: au focus de la fenêtre)
     func refresh() {
+        defaults.synchronize()
         let slots = defaults.peakTimeSlots ?? PeakTimeSlot.defaultSlots
         state = PeakTimeSlot.currentState(slots: slots)
         let now = Date()
@@ -81,6 +90,7 @@ public struct FeuTricoloreView: View {
         .padding(8)
         .frame(minWidth: 130, maxWidth: 140, minHeight: 140, maxHeight: 155)
         .background(Color(.windowBackgroundColor))
+        .onAppear { vm.refresh() }
     }
 
     private var etat: String { ["green":"Off-Peak","orange":"Peak <15 min","red":"Peak actif"][vm.state.rawValue] ?? "" }
