@@ -34,7 +34,8 @@ final class FeuViewModel: ObservableObject {
     func refresh() {
         defaults.synchronize()
         let slots = defaults.peakTimeSlots ?? PeakTimeSlot.defaultSlots
-        state = PeakTimeSlot.currentState(slots: slots)
+        let orangeMin = defaults.orangeMinutes
+        state = PeakTimeSlot.currentState(slots: slots, orangeMinutes: orangeMin)
         let now = Date()
         let cal = Calendar.current
         let weekday = cal.component(.weekday, from: now)
@@ -92,7 +93,7 @@ public struct FeuTricoloreView: View {
             }
         }
         .padding(8)
-        .frame(minWidth: 130, maxWidth: 140, minHeight: 140, maxHeight: 155)
+        .frame(minWidth: 135, maxWidth: 150, minHeight: 175, maxHeight: 210)
         .background(Color(.windowBackgroundColor))
         .onAppear { vm.refresh() }
     }

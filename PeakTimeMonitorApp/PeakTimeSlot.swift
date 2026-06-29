@@ -41,9 +41,11 @@ public extension PeakTimeSlot {
     ]
 
     /// Determine the current traffic-light state based on the given slots.
-    /// - Parameter slots: The list of peak time slots to evaluate against
-    /// - Returns: `.green` if no peak is active or imminent, `.orange` if a peak starts in < 15 minutes, `.red` if currently in a peak
-    static func currentState(slots: [PeakTimeSlot]) -> FeuState {
+    /// - Parameters:
+    ///   - slots: The list of peak time slots to evaluate against
+    ///   - orangeMinutes: How many minutes before a peak to show orange (default 15)
+    /// - Returns: `.green` if no peak is active or imminent, `.orange` if a peak starts within orangeMinutes, `.red` if currently in a peak
+    static func currentState(slots: [PeakTimeSlot], orangeMinutes: Int = 15) -> FeuState {
         let now = Date()
         let calendar = Calendar.current
         let weekday = calendar.component(.weekday, from: now)
@@ -63,11 +65,11 @@ public extension PeakTimeSlot {
             }
         }
 
-        // Check if a peak starts within 15 minutes
+        // Check if a peak starts within orangeMinutes
         for slot in todaySlots {
             let startMinutes = slot.startHour * 60 + slot.startMinute
             let diff = startMinutes - currentMinutes
-            if diff > 0 && diff <= 15 {
+            if diff > 0 && diff <= orangeMinutes {
                 return .orange
             }
         }
@@ -80,6 +82,7 @@ public extension PeakTimeSlot {
 
 extension UserDefaults {
     private static let peakTimeSlotsKey = "peakTimeSlots"
+    private static let orangeMinutesKey = "orangeMinutes"
 
     public var peakTimeSlots: [PeakTimeSlot]? {
         get {
@@ -94,5 +97,10 @@ extension UserDefaults {
                 removeObject(forKey: Self.peakTimeSlotsKey)
             }
         }
+    }
+
+    public var orangeMinutes: Int {
+        get { integer(forKey: Self.orangeMinutesKey) }
+        set { set(newValue, forKey: Self.orangeMinutesKey) }
     }
 }

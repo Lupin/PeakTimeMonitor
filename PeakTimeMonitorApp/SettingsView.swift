@@ -148,6 +148,7 @@ public struct SettingsView: View {
     @State private var slots: [PeakTimeSlot] = []
     @State private var showAddSheet = false
     @State private var isEditing = false
+    @State private var orangeMinutes: Int = 15
     private let defaults = UserDefaults(suiteName: "group.peakmonitor")!
 
     public init() {}
@@ -162,6 +163,23 @@ public struct SettingsView: View {
                     if !isEditing { saveAndNotify() }
                 }
                 .buttonStyle(.bordered).controlSize(.small)
+            }
+
+            // Orange delay setting
+            HStack {
+                Text("Alerte orange :").font(.system(size: 12))
+                Picker("", selection: $orangeMinutes) {
+                    Text("5 min").tag(5)
+                    Text("10 min").tag(10)
+                    Text("15 min").tag(15)
+                    Text("20 min").tag(20)
+                    Text("30 min").tag(30)
+                    Text("45 min").tag(45)
+                    Text("60 min").tag(60)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .onChange(of: orangeMinutes) { _, _ in saveAndNotify() }
             }
 
             if slots.isEmpty {
@@ -208,10 +226,13 @@ public struct SettingsView: View {
     private func load() {
         if let saved = defaults.peakTimeSlots, !saved.isEmpty { slots = saved }
         else { slots = PeakTimeSlot.defaultSlots }
+        let om = defaults.orangeMinutes
+        orangeMinutes = om > 0 ? om : 15
     }
 
     private func saveAndNotify() {
         defaults.peakTimeSlots = slots
+        defaults.orangeMinutes = orangeMinutes
         defaults.synchronize()
         DistributedNotificationCenter.default().postNotificationName(NSNotification.Name("PeakTimeSlotsChanged"), object: nil, userInfo: nil, deliverImmediately: true)
     }
