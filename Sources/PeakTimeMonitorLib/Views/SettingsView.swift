@@ -163,7 +163,6 @@ public struct SettingsView: View {
     @State private var showAddSheet = false
 
     private let defaults = UserDefaults(suiteName: "group.peakmonitor")!
-    private let defaultsKey = "peakTimeSlots"
 
     public init() {}
 
