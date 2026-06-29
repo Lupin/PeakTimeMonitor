@@ -60,10 +60,10 @@ struct AddSlotSheet: View {
                     ForEach(0..<48, id: \.self) { i in
                         Text(timeSlots[i].label)
                             .tag(i)
-                            .font(.system(size: 12, design: .monospaced))
+                            .font(.system(size: 14, design: .monospaced))
                     }
                 }
-                .frame(width: 65)
+                .frame(width: 75)
                 .clipped()
 
                 Text("–").font(.system(size: 14)).foregroundColor(.secondary)
@@ -72,10 +72,10 @@ struct AddSlotSheet: View {
                     ForEach(0..<48, id: \.self) { i in
                         Text(timeSlots[i].label)
                             .tag(i)
-                            .font(.system(size: 12, design: .monospaced))
+                            .font(.system(size: 14, design: .monospaced))
                     }
                 }
-                .frame(width: 65)
+                .frame(width: 75)
                 .clipped()
             }
 
@@ -207,23 +207,23 @@ struct EditSlotRow: View {
             Picker("", selection: $startIdx) {
                 ForEach(0..<48, id: \.self) { i in
                     Text(timeSlots[i].label)
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.system(size: 12, design: .monospaced))
                         .tag(i)
                 }
             }
-            .frame(width: 60)
+            .frame(width: 72)
             .clipped()
 
-            Text("–").font(.system(size: 11)).foregroundColor(.secondary)
+            Text("–").font(.system(size: 12)).foregroundColor(.secondary)
 
             Picker("", selection: $endIdx) {
                 ForEach(0..<48, id: \.self) { i in
                     Text(timeSlots[i].label)
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.system(size: 12, design: .monospaced))
                         .tag(i)
                 }
             }
-            .frame(width: 60)
+            .frame(width: 72)
             .clipped()
 
             Spacer()
