@@ -140,14 +140,24 @@ struct AddSlotSheet: View {
 public struct SettingsView: View {
     @State private var slots: [PeakTimeSlot] = []
     @State private var showAddSheet = false
-    @State private var editingSlotIndex: Int?
+    @State private var isEditing = false
+    @State private var editingIndex: Int?
+
     private let defaults = UserDefaults(suiteName: "group.peakmonitor")!
 
     public init() {}
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Créneaux Peak").font(.title3).bold()
+            HStack {
+                Text("Créneaux Peak").font(.title3).bold()
+                Spacer()
+                Button(isEditing ? "Terminé" : "Modifier") {
+                    isEditing.toggle()
+                    if !isEditing { editingIndex = nil; saveAndNotify() }
+                }
+                .buttonStyle(.bordered).controlSize(.small)
+            }
 
             if slots.isEmpty {
                 Text("Aucun créneau défini.").foregroundColor(.secondary)
@@ -155,22 +165,19 @@ public struct SettingsView: View {
             } else {
                 List {
                     ForEach(slots.indices, id: \.self) { i in
-                        HStack {
-                            Text(slots[i].weekdayName)
-                                .frame(width: 60, alignment: .leading)
-                                .font(.system(size: 12, weight: .medium))
-                            Text(slots[i].timeRangeFormatted)
-                                .font(.system(size: 12, design: .monospaced))
-                            Spacer()
+                        if isEditing {
+                            SlotEditRowView(slot: $slots[i]) {
+                                slots.remove(at: i)
+                            }
+                        } else {
+                            HStack {
+                                Text(slots[i].weekdayName)
+                                    .frame(width: 60, alignment: .leading)
+                                    .font(.system(size: 12, weight: .medium))
+                                Text(slots[i].timeRangeFormatted)
+                                    .font(.system(size: 12, design: .monospaced))
+                            }
                         }
-                        .contentShape(Rectangle())
-                        .onTapGesture(count: 2) {
-                            editingSlotIndex = i
-                        }
-                    }
-                    .onDelete { indexSet in
-                        slots.remove(atOffsets: indexSet)
-                        saveAndNotify()
                     }
                 }
                 .listStyle(.inset)
@@ -178,17 +185,12 @@ public struct SettingsView: View {
             }
 
             HStack {
-                Button { showAddSheet = true } label: {
-                    Image(systemName: "plus").fontWeight(.semibold)
+                if isEditing {
+                    Button { showAddSheet = true } label: {
+                        Label("Ajouter", systemImage: "plus")
+                    }
+                    .buttonStyle(.bordered).controlSize(.small)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-
-                Spacer()
-
-                Text("Double-clic pour modifier, ← pour supprimer")
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary)
 
                 Spacer()
 
@@ -202,10 +204,11 @@ public struct SettingsView: View {
         .padding()
         .frame(minWidth: 460, minHeight: 300)
         .onAppear(perform: load)
+        .onDisappear { if isEditing { isEditing = false; saveAndNotify() } }
         .sheet(isPresented: $showAddSheet) {
             AddSlotSheet { s in slots.append(s); saveAndNotify() }
         }
-        .sheet(item: $editingSlotIndex) { index in
+        .sheet(item: $editingIndex) { index in
             EditSlotPopover(slot: $slots[index], onSave: { saveAndNotify() })
         }
     }
@@ -222,7 +225,65 @@ public struct SettingsView: View {
     }
 }
 
-// Conformance pour .sheet(item:)
+// MARK: - Slot row in edit mode
+
+struct SlotEditRowView: View {
+    @Binding var slot: PeakTimeSlot
+    let onDelete: () -> Void
+
+    @State private var startText: String = ""
+    @State private var endText: String = ""
+
+    var body: some View {
+        HStack(spacing: 8) {
+            // Day picker
+            Text(slot.weekdayName)
+                .frame(width: 60, alignment: .leading)
+                .font(.system(size: 12, weight: .medium))
+
+            // Time fields
+            TextField("HH:MM", text: $startText)
+                .frame(width: 55)
+                .font(.system(size: 11, design: .monospaced))
+            Text("–").font(.system(size: 11)).foregroundColor(.secondary)
+            TextField("HH:MM", text: $endText)
+                .frame(width: 55)
+                .font(.system(size: 11, design: .monospaced))
+
+            Spacer()
+
+            Button { onDelete() } label: {
+                Image(systemName: "minus.circle.fill")
+                    .foregroundColor(.red)
+                    .font(.system(size: 16))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 2)
+        .onAppear {
+            startText = String(format: "%02d:%02d", slot.startHour, slot.startMinute)
+            endText = String(format: "%02d:%02d", slot.endHour, slot.endMinute)
+        }
+        .onChange(of: startText) { _ in parseStart() }
+        .onChange(of: endText) { _ in parseEnd() }
+    }
+
+    private func parseStart() {
+        let p = startText.replacingOccurrences(of: "h", with: ":").split(separator: ":").compactMap { Int($0) }
+        if p.count == 2, p[0] >= 0 && p[0] < 24, p[1] >= 0 && p[1] < 60 {
+            slot.startHour = p[0]; slot.startMinute = p[1]
+        }
+    }
+
+    private func parseEnd() {
+        let p = endText.replacingOccurrences(of: "h", with: ":").split(separator: ":").compactMap { Int($0) }
+        if p.count == 2, p[0] >= 0 && p[0] < 24, p[1] >= 0 && p[1] < 60 {
+            slot.endHour = p[0]; slot.endMinute = p[1]
+        }
+    }
+}
+
+// Conformance for .sheet(item:)
 extension Int: @retroactive Identifiable {
     public var id: Int { self }
 }
