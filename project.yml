@@ -31,29 +31,8 @@ targets:
         MARKETING_VERSION: "1.0"
     entitlements:
       path: PeakTimeMonitorApp/PeakTimeMonitor.entitlements
-    dependencies:
-      - target: PeakTimeWidget
     postCompileScripts:
       - name: "Strip xattr from app bundle"
         script: |
           xattr -cr "${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}" 2>/dev/null || true
         basedOnDependencyAnalysis: false
-
-  PeakTimeWidget:
-    type: app-extension
-    platform: macOS
-    sources:
-      - path: PeakTimeWidgetExtension
-    settings:
-      base:
-        CODE_SIGNING_ALLOWED: NO
-        INFOPLIST_FILE: PeakTimeWidgetExtension/Info.plist
-        PRODUCT_BUNDLE_IDENTIFIER: com.gael.peaktime.widget
-        PRODUCT_NAME: PeakTimeWidget
-        GENERATE_INFOPLIST_FILE: YES
-        SKIP_INSTALL: YES
-        CURRENT_PROJECT_VERSION: 1
-        MARKETING_VERSION: "1.0"
-        INFOPLIST_KEY_CFBundleDisplayName: "Peak Time"
-    entitlements:
-      path: PeakTimeWidgetExtension/PeakTimeWidget.entitlements
