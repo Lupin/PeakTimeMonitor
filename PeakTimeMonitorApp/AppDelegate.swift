@@ -1,33 +1,16 @@
 import Cocoa
+import SwiftUI
 
-/// Objet target pour le NSMenu — séparé de l'AppDelegate pour garantir
-/// qu'il est dans la responder chain. Stocké en static pour ne jamais être libéré.
+/// Objet target pour le NSMenu — singleton, jamais libéré
 final class MenuTarget: NSObject {
     static let shared = MenuTarget()
 
     @objc func showMainWindow() {
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
-        // Utilise l'API SwiftUI openWindow pour ouvrir la fenêtre "main"
-        if NSApp.responds(to: Selector(("openWindow:withIdentifier:"))) {
-            NSApp.perform(Selector(("openWindow:withIdentifier:")), with: "main")
-        }
+        AppDelegate.instance?.openMainWindow()
     }
 
     @objc func openPreferences() {
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
-        // Ouvre via le menu application standard
-        if let appMenu = NSApp.mainMenu?.items.first?.submenu {
-            for item in appMenu.items {
-                if item.action == Selector(("showSettingsWindow:")) || item.keyEquivalent == "," {
-                    NSApp.sendAction(item.action!, to: item.target, from: item)
-                    return
-                }
-            }
-        }
-        // Fallback
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        AppDelegate.instance?.openPreferences()
     }
 
     @objc func quitApp() {
@@ -36,13 +19,23 @@ final class MenuTarget: NSObject {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    static weak var instance: AppDelegate?
+
     private var statusItem: NSStatusItem!
     private var timer: Timer?
     private let menuTarget = MenuTarget.shared
 
+    /// Fenêtre principale créée manuellement (pas via SwiftUI WindowGroup)
+    private var mainWindow: NSWindow?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Self.instance = self
         NSApp.setActivationPolicy(.regular)
 
+        // Créer la fenêtre manuellement
+        createMainWindow()
+
+        // Barre de menu
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         updateIcon()
 
@@ -50,23 +43,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let t = menuTarget
 
         let showItem = NSMenuItem(title: "Afficher", action: #selector(MenuTarget.showMainWindow), keyEquivalent: "")
-        showItem.target = t
-        menu.addItem(showItem)
-
+        showItem.target = t; menu.addItem(showItem)
         menu.addItem(.separator())
-
         let prefsItem = NSMenuItem(title: "Préférences", action: #selector(MenuTarget.openPreferences), keyEquivalent: ",")
-        prefsItem.target = t
-        menu.addItem(prefsItem)
-
+        prefsItem.target = t; menu.addItem(prefsItem)
         menu.addItem(.separator())
-
         let quitItem = NSMenuItem(title: "Quitter", action: #selector(MenuTarget.quitApp), keyEquivalent: "q")
-        quitItem.target = t
-        menu.addItem(quitItem)
+        quitItem.target = t; menu.addItem(quitItem)
 
-        // Empêcher l'auto-terminaison du menu
-        menu.autoenablesItems = false
         statusItem.menu = menu
 
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
@@ -75,6 +59,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+
+    // MARK: - Fenêtre principale (AppKit, pas SwiftUI)
+
+    private func createMainWindow() {
+        let contentView = FeuTricoloreView()
+            .frame(minWidth: 135, maxWidth: 150, minHeight: 175, maxHeight: 210)
+
+        let hostingView = NSHostingView(rootView: contentView)
+
+        mainWindow = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 140, height: 190),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        mainWindow?.title = "PeakTimeMonitor"
+        mainWindow?.isReleasedWhenClosed = false
+        mainWindow?.contentView = hostingView
+        mainWindow?.center()
+    }
+
+    func openMainWindow() {
+        NSApp.setActivationPolicy(.regular)
+        if mainWindow == nil { createMainWindow() }
+        mainWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func openPreferences() {
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        if NSApp.responds(to: Selector(("showSettingsWindow:"))) {
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        }
+    }
+
+    // MARK: - Icon
 
     func updateIcon() {
         let d = UserDefaults(suiteName: "group.peakmonitor")
