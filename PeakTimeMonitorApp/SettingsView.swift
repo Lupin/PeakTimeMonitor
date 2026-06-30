@@ -215,7 +215,7 @@ public struct SettingsView: View {
             }
 
             // Version
-            Text("PeakTimeMonitor v1.0")
+            Text("PeakTimeMonitor \(appVersion)")
                 .font(.system(size: 9))
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -241,6 +241,12 @@ public struct SettingsView: View {
         defaults.orangeMinutes = orangeMinutes
         defaults.synchronize()
         DistributedNotificationCenter.default().postNotificationName(NSNotification.Name("PeakTimeSlotsChanged"), object: nil, userInfo: nil, deliverImmediately: true)
+    }
+
+    private var appVersion: String {
+        let marketing = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "v\(marketing) (\(build))"
     }
 }
 
