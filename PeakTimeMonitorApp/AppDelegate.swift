@@ -9,63 +9,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let button = statusItem.button {
             button.image = makeFeuIcon(state: currentState())
             button.image?.isTemplate = true
+            button.target = self
+            button.action = #selector(toggleWindow)
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
-
-        let menu = NSMenu()
-
-        let showItem = NSMenuItem(title: "Afficher la fenêtre", action: nil, keyEquivalent: "")
-        showItem.target = self
-        showItem.action = #selector(showWindow)
-        menu.addItem(showItem)
-
-        menu.addItem(.separator())
-
-        let prefsItem = NSMenuItem(title: "Préférences", action: nil, keyEquivalent: ",")
-        prefsItem.target = self
-        prefsItem.action = #selector(openPrefs)
-        menu.addItem(prefsItem)
-
-        menu.addItem(.separator())
-
-        let quitItem = NSMenuItem(title: "Quitter", action: nil, keyEquivalent: "q")
-        quitItem.target = self
-        quitItem.action = #selector(quitApp)
-        menu.addItem(quitItem)
-
-        statusItem.menu = menu
 
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             self?.updateIcon()
         }
 
-        // Empêcher l'app de quitter quand la fenêtre est fermée
         NSApp.setActivationPolicy(.regular)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        return false // Rester actif dans la barre de menu
+        return false
     }
 
-    @objc private func showWindow() {
+    /// Clic gauche = afficher fenêtre, clic droit = menu contextuel
+    @objc private func toggleWindow() {
+        let event = NSApp.currentEvent
+        if event?.type == .rightMouseUp {
+            showContextMenu()
+        } else {
+            showMainWindow()
+        }
+    }
+
+    @objc private func showMainWindow() {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        if let window = NSApp.windows.first(where: { $0.isVisible || $0.title.contains("Peak") }) {
-            window.makeKeyAndOrderFront(nil)
-        } else {
-            // Si la fenêtre n'existe pas encore, on la recrée via le WindowGroup
-            NSApp.windows.first?.makeKeyAndOrderFront(nil)
+        NSApp.windows.first?.makeKeyAndOrderFront(nil)
+    }
+
+    private func showContextMenu() {
+        let menu = NSMenu()
+        let showItem = NSMenuItem(title: "Afficher la fenêtre", action: #selector(showMainWindow), keyEquivalent: "")
+        showItem.target = self
+        menu.addItem(showItem)
+        menu.addItem(.separator())
+        let prefsItem = NSMenuItem(title: "Préférences", action: #selector(openPrefs), keyEquivalent: ",")
+        menu.addItem(prefsItem)
+        menu.addItem(.separator())
+        menu.addItem(NSMenuItem(title: "Quitter", action: #selector(quitApp), keyEquivalent: "q"))
+
+        for item in menu.items {
+            item.target = self
         }
+
+        statusItem.menu = menu
+        statusItem.button?.performClick(nil)
+        statusItem.menu = nil
     }
 
     @objc private func openPrefs() {
         NSApp.activate(ignoringOtherApps: true)
-        // Ouvre les Settings via la commande standard
-        if #available(macOS 14.0, *) {
-            // macOS 14+ : Settings
-            let sel = NSSelectorFromString("showSettingsWindow:")
-            if NSApp.responds(to: sel) {
-                NSApp.perform(sel)
-            }
+        let sel = NSSelectorFromString("showSettingsWindow:")
+        if NSApp.responds(to: sel) {
+            NSApp.perform(sel)
         }
     }
 
