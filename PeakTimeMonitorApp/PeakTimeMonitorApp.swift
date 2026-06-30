@@ -15,6 +15,6 @@ struct PeakTimeMonitorApp: App {
             SettingsView()
         }
         .windowResizability(.contentSize)
-        .defaultSize(width: 520, height: 340)
+        .defaultSize(width: 620, height: 420)
     }
 }

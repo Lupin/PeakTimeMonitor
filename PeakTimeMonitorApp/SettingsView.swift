@@ -39,7 +39,7 @@ extension PeakTimeSlot {
 fileprivate let rowHeight: CGFloat   = 28
 fileprivate let delW: CGFloat       = 28   // delete button (24 icon + 4 gap)
 fileprivate let colDay: CGFloat     = 110  // day label
-fileprivate let colTime: CGFloat    = 52   // HH:MM picker
+fileprivate let colTime: CGFloat    = 72   // HH:MM picker (+AM/PM)
 fileprivate let colDash: CGFloat    = 14   // "–"
 
 // MARK: - Time Picker (Menu-based, fixed width)
@@ -309,7 +309,7 @@ public struct SettingsView: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .padding()
-        .frame(minWidth: 540, minHeight: 420)
+        .frame(minWidth: 620, minHeight: 420)
         .onAppear(perform: load)
         .onDisappear { if isEditing { isEditing = false; saveAndNotify() } }
         .sheet(isPresented: $showAddSheet) {
