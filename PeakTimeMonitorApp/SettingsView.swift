@@ -244,9 +244,8 @@ public struct SettingsView: View {
     }
 
     private var appVersion: String {
-        let marketing = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-        return "v\(marketing) (\(build))"
+        let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        return "v\(v)"
     }
 }
 
