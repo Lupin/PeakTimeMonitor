@@ -34,7 +34,11 @@ struct PeakTimeMonitorApp: App {
             Button("Quitter") { NSApp.terminate(nil) }
                 .keyboardShortcut("q", modifiers: .command)
         } label: {
-            Image(systemName: currentMenuIconName)
+            HStack(spacing: 1) {
+                Circle().frame(width: 4, height: 4).foregroundColor(state == .red ? .primary : .secondary.opacity(0.3))
+                Circle().frame(width: 4, height: 4).foregroundColor(state == .orange ? .primary : .secondary.opacity(0.3))
+                Circle().frame(width: 4, height: 4).foregroundColor(state == .green ? .primary : .secondary.opacity(0.3))
+            }
         }
         .menuBarExtraStyle(.menu)
 
@@ -46,15 +50,11 @@ struct PeakTimeMonitorApp: App {
         .defaultSize(width: 460, height: 360)
     }
 
-    /// Lit l'état courant pour l'icône de la barre de menu (monochrome-friendly)
-    private var currentMenuIconName: String {
+    /// Lit l'état courant pour le mini-feu de la barre de menu
+    private var state: FeuState {
         let defaults = UserDefaults(suiteName: "group.peakmonitor")
         let slots = defaults?.peakTimeSlots ?? PeakTimeSlot.defaultSlots
         let orangeMin = defaults?.integer(forKey: "orangeMinutes") ?? 15
-        switch PeakTimeSlot.currentState(slots: slots, orangeMinutes: orangeMin > 0 ? orangeMin : 15) {
-        case .red:    return "circle.fill"
-        case .orange: return "circle.lefthalf.filled"
-        case .green:  return "circle"
-        }
+        return PeakTimeSlot.currentState(slots: slots, orangeMinutes: orangeMin > 0 ? orangeMin : 15)
     }
 }
