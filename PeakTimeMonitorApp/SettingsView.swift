@@ -48,10 +48,25 @@ fileprivate let colDash: CGFloat    = 14   // "–"
 /// Affiche l'heure choisie dans un cadre de largeur fixe pour un alignement
 /// cohérent avec le reste de la liste.
 struct MenuTimePicker: View {
-    /// Heure sélectionnée (0–23)
     @Binding var hour: Int
-    /// Minute sélectionnée (0, 15, 30 ou 45)
     @Binding var minute: Int
+
+    /// Lit le format depuis UserDefaults (App Group)
+    private var use24Hour: Bool {
+        UserDefaults(suiteName: "group.peakmonitor")?.use24Hour ?? true
+    }
+
+    /// Génère le label d'une tranche horaire selon le format 24h/12h
+    private func labelFor(_ i: Int) -> String {
+        let (h, m) = timeSlot(i)
+        if use24Hour {
+            return String(format: "%02d:%02d", h, m)
+        } else {
+            let h12 = h == 0 ? 12 : (h > 12 ? h - 12 : h)
+            let ampm = h < 12 ? String(localized: "AM") : String(localized: "PM")
+            return String(format: "%d:%02d %@", h12, m, ampm)
+        }
+    }
 
     var body: some View {
         Menu {
@@ -60,12 +75,12 @@ struct MenuTimePicker: View {
                     hour = timeSlot(i).hour
                     minute = timeSlot(i).min
                 } label: {
-                    Text(timeLabels[i])
+                    Text(labelFor(i))
                         .font(.system(size: 13, design: .monospaced))
                 }
             }
         } label: {
-            Text(String(format: "%02d:%02d", hour, minute))
+            Text(labelFor(timeIdx(hour: hour, minute: minute)))
                 .font(.system(size: 13, design: .monospaced))
                 .frame(width: colTime, alignment: .center)
         }
