@@ -20,6 +20,7 @@ targets:
       - path: PeakTimeMonitorApp
     settings:
       base:
+        CODE_SIGNING_ALLOWED: NO
         INFOPLIST_FILE: PeakTimeMonitorApp/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.gael.peaktime
         PRODUCT_NAME: PeakTimeMonitor
@@ -45,6 +46,7 @@ targets:
       - path: PeakTimeWidgetExtension
     settings:
       base:
+        CODE_SIGNING_ALLOWED: NO
         INFOPLIST_FILE: PeakTimeWidgetExtension/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.gael.peaktime.widget
         PRODUCT_NAME: PeakTimeWidget
