@@ -1,31 +1,49 @@
 import Cocoa
 import SwiftUI
 
-/// Objet target pour le NSMenu — singleton, jamais libéré
-final class MenuTarget: NSObject {
+/// Singleton cible des actions du `NSMenu` de la barre de statut.
+///
+/// Les `NSMenuItem` AppKit nécessitent un objet target ObjC pour recevoir
+/// les actions. Ce singleton n'est jamais libéré et reste accessible depuis
+/// le menu pendant toute la durée de vie de l'application.
+final class MenuTarget: NSObject, @unchecked Sendable {
     static let shared = MenuTarget()
 
+    /// Affiche ou crée la fenêtre principale du feu tricolore
     @objc func showMainWindow() {
         AppDelegate.instance?.openMainWindow()
     }
 
+    /// Ouvre la fenêtre des préférences (Settings SwiftUI)
     @objc func openPreferences() {
         AppDelegate.instance?.openPreferences()
     }
 
+    /// Quitte l'application
     @objc func quitApp() {
         NSApp.terminate(nil)
     }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    static weak var instance: AppDelegate?
+/// Délégué AppKit de l'application.
+///
+/// Gère le cycle de vie NSApplication, la barre de statut macOS avec icône de feu
+/// tricolore, la fenêtre principale (créée manuellement plutôt que via `WindowGroup`),
+/// et l'ouverture des préférences. L'icône de la barre de statut est rafraîchie
+/// toutes les 30 secondes.
+final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
+    /// Référence faible au singleton pour accès depuis MenuTarget
+    nonisolated(unsafe) static weak var instance: AppDelegate?
 
+    /// Élément de la barre de statut macOS contenant l'icône et le menu
     private var statusItem: NSStatusItem!
+    /// Timer 30s pour rafraîchir l'icône de la barre de statut
     private var timer: Timer?
+    /// Target partagé pour les actions du menu de la barre de statut
     private let menuTarget = MenuTarget.shared
 
-    /// Fenêtre principale créée manuellement (pas via SwiftUI WindowGroup)
+    /// Fenêtre principale créée manuellement — pas gérée par SwiftUI, donc
+    /// `isReleasedWhenClosed = false` pour éviter qu'elle soit désallouée à la fermeture
     private var mainWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -61,10 +79,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Empêche l'app de quitter quand la dernière fenêtre est fermée — l'utilisateur
+    /// doit explicitement choisir Quitter dans le menu
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     // MARK: - Fenêtre principale (AppKit, pas SwiftUI)
 
+    /// Crée une `NSWindow` hébergeant `FeuTricoloreView` via `NSHostingView`.
+    /// La fenêtre est persistante (`isReleasedWhenClosed = false`) pour survivre
+    /// aux fermetures multiples.
     private func createMainWindow() {
         let contentView = FeuTricoloreView()
             .frame(minWidth: 135, maxWidth: 150, minHeight: 175, maxHeight: 210)
@@ -83,6 +106,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mainWindow?.center()
     }
 
+    /// Affiche la fenêtre principale, en la recréant si elle a été libérée.
+    /// Passe l'activation policy en `.regular` pour que l'app apparaisse dans le dock.
     func openMainWindow() {
         NSApp.setActivationPolicy(.regular)
         if mainWindow == nil { createMainWindow() }
@@ -90,6 +115,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    /// Ouvre les préférences en envoyant l'action `showSettingsWindow:` via le menu
+    /// AppKit. Si le sélecteur n'est pas trouvé (ex: exécution hors bundle), crée
+    /// une fenêtre settings manuelle comme fallback.
     func openPreferences() {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
@@ -107,6 +135,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         openSettingsFallback()
     }
 
+    /// Fenêtre settings de fallback, créée manuellement si l'action menu standard
+    /// n'est pas disponible (ex: exécution en dehors du bundle .app)
     private var settingsWindow: NSWindow?
     private func openSettingsFallback() {
         if settingsWindow == nil {
@@ -126,6 +156,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Icon
 
+    /// Lit les créneaux et le délai orange depuis UserDefaults, détermine l'état
+    /// courant, puis met à jour l'icône de la barre de statut en conséquence.
     func updateIcon() {
         let d = UserDefaults(suiteName: "group.peakmonitor")
         let slots = d?.peakTimeSlots ?? PeakTimeSlot.defaultSlots
@@ -134,6 +166,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.button?.image = Self.makeFeuIcon(state: state)
     }
 
+    /// Dessine programmatiquement une icône de feu tricolore 16×16.
+    ///
+    /// Template image (monochrome) : le cercle actif est en `labelColor`,
+    /// les inactifs en `tertiaryLabelColor`. La disposition verticale est :
+    /// rouge en bas (y=11.5), orange au milieu (y=8), vert en haut (y=4.5).
+    /// - Parameter state: L'état du feu déterminant quel cercle est allumé
+    /// - Returns: Une `NSImage` template 16×16
     static func makeFeuIcon(state: FeuState) -> NSImage {
         let img = NSImage(size: NSSize(width: 16, height: 16))
         img.isTemplate = true

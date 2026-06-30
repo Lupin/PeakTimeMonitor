@@ -1,13 +1,23 @@
 import SwiftUI
 import Combine
 
+/// ViewModel principal du feu tricolore.
+///
+/// Rafraîchit l'état toutes les 30 secondes, au focus de la fenêtre et à chaque
+/// modification des préférences (notification distribuée inter-processus). Lit les
+/// créneaux depuis le UserDefaults partagé `group.peakmonitor`.
 @MainActor
 final class FeuViewModel: ObservableObject {
+    /// État courant du feu (vert/off-peak, orange/imminent, rouge/actif)
     @Published var state: FeuState = .green
+    /// Créneau du prochain peak, formaté "HH:MM–HH:MM" ou "—" si aucun
     @Published var prochainePlage: String = "—"
+    /// Compte à rebours avant le prochain peak, ex: "45 min" ou "1h 30m"
     @Published var compteARebours: String = ""
 
+    /// UserDefaults partagé entre l'app principale et l'extension de barre de statut
     private let defaults = UserDefaults(suiteName: "group.peakmonitor")!
+    /// Timer 30s — `nonisolated(unsafe)` car accédé depuis le callback non-MainActor
     nonisolated(unsafe) private var timer: Timer?
 
     init() {
@@ -30,7 +40,8 @@ final class FeuViewModel: ObservableObject {
         timer?.invalidate()
     }
 
-    /// Appeler pour forcer un rafraîchissement (ex: au focus de la fenêtre)
+    /// Recalcule l'état du feu et le prochain créneau à partir des données UserDefaults.
+    /// Appelé périodiquement par le timer, ainsi qu'au focus et sur changement de préférences.
     func refresh() {
         defaults.synchronize()
         let slots = defaults.peakTimeSlots ?? PeakTimeSlot.defaultSlots
@@ -40,6 +51,7 @@ final class FeuViewModel: ObservableObject {
         let cal = Calendar.current
         let weekday = cal.component(.weekday, from: now)
         let cur = cal.component(.hour, from: now) * 60 + cal.component(.minute, from: now)
+        // Filtrer les créneaux du jour (aujourd'hui ou tous les jours ouvrables)
         let today = slots.filter { $0.weekday == weekday || ($0.weekday == 0 && weekday >= 2 && weekday <= 6) }.sorted { ($0.startHour*60+$0.startMinute) < ($1.startHour*60+$1.startMinute) }
         var next: PeakTimeSlot?, minD = Int.max
         for s in today { let d = (s.startHour*60+s.startMinute)-cur; if d>0 && d<minD { minD=d; next=s } }
@@ -53,8 +65,16 @@ final class FeuViewModel: ObservableObject {
     }
 }
 
+/// Un cercle lumineux du feu tricolore.
+///
+/// Actif : couleur pleine, légèrement agrandi, opaque.
+/// Inactif : grisé, réduit, semi-transparent.
 struct CercleFeu: View {
-    let color: Color; let isActive: Bool
+    /// Couleur du cercle quand il est actif (red, orange, green)
+    let color: Color
+    /// Si `true`, le cercle est allumé ; sinon grisé et discret
+    let isActive: Bool
+    
     var body: some View {
         Circle().fill(isActive ? color : .gray.opacity(0.2))
             .frame(width: 24, height: 24)
@@ -65,7 +85,13 @@ struct CercleFeu: View {
     }
 }
 
+/// Vue principale du feu tricolore affichant l'état tarifaire (off-peak / peak).
+///
+/// Composée de trois cercles (rouge, orange, vert), d'une ligne de statut textuel
+/// et du prochain créneau avec compte à rebours. La fenêtre est gérée manuellement
+/// par ``AppDelegate`` via `NSHostingView`.
 public struct FeuTricoloreView: View {
+    /// ViewModel pilotant l'état et les rafraîchissements périodiques
     @StateObject private var vm = FeuViewModel()
     public init() {}
 
@@ -98,8 +124,11 @@ public struct FeuTricoloreView: View {
         .onAppear { vm.refresh() }
     }
 
+    /// Libellé texte correspondant à l'état actuel (Off-Peak / Peak <15 min / Peak actif)
     private var etat: String { ["green":"Off-Peak","orange":"Peak <15 min","red":"Peak actif"][vm.state.rawValue] ?? "" }
+    /// Description du tarif (Tarif normal / Préparation / Tarif ×2)
     private var tarif: String { ["green":"Tarif normal","orange":"Préparation","red":"Tarif ×2"][vm.state.rawValue] ?? "" }
+    /// Couleur du texte d'état, synchronisée avec l'état du feu
     private var couleur: Color { [.green:.green,.orange:.orange,.red:.red][vm.state] ?? .primary }
 }
 

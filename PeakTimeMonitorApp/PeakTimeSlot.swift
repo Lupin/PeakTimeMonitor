@@ -1,13 +1,20 @@
 import Foundation
 
-/// Represents a peak time slot for a specific weekday.
-/// weekday: 0 = all weekdays (Mon-Fri), 1 = Sunday, 2 = Monday, ..., 7 = Saturday
+/// Représente un créneau horaire de peak tarifaire.
+///
+/// - `weekday` : 0 = tous les jours ouvrables (lun–ven), 1 = dimanche, 2–7 = lundi–samedi
+/// - Les heures et minutes sont en valeurs entières (0–23 et 0–59)
 public struct PeakTimeSlot: Codable, Equatable, Sendable {
-    public var weekday: Int       // 0-7 (0 = all weekdays)
-    public var startHour: Int     // 0-23
-    public var startMinute: Int   // 0-59
-    public var endHour: Int       // 0-23
-    public var endMinute: Int     // 0-59
+    /// Jour de la semaine (0 = lun–ven, 1 = dimanche, 2–7 = lundi–samedi)
+    public var weekday: Int
+    /// Heure de début du créneau (0–23)
+    public var startHour: Int
+    /// Minute de début du créneau (0–59)
+    public var startMinute: Int
+    /// Heure de fin du créneau (0–23)
+    public var endHour: Int
+    /// Minute de fin du créneau (0–59)
+    public var endMinute: Int
 
     public init(weekday: Int, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int) {
         self.weekday = weekday
@@ -18,26 +25,35 @@ public struct PeakTimeSlot: Codable, Equatable, Sendable {
     }
 }
 
-/// Traffic-light state for peak time monitoring
+/// État du feu tricolore correspondant à la situation tarifaire courante.
+/// - `.green`  : off-peak, tarif normal
+/// - `.orange` : peak imminent (dans moins de N minutes), préparation
+/// - `.red`    : peak actif, tarif majoré
 public enum FeuState: String, Equatable {
-    case green  // off-peak
-    case orange // peak starts in < 15 minutes
-    case red    // peak is active
+    case green
+    case orange
+    case red
 }
 
 public extension PeakTimeSlot {
-    /// DeepSeek Paris peak times: 3h-6h and 8h-12h, Monday-Friday
-    /// Uses weekday=0 (all weekdays) so it's just 2 slots instead of 10
+    /// Créneaux par défaut pour le tarif DeepSeek à Paris : 3h–6h et 8h–12h, lundi à vendredi.
+    /// Utilise `weekday=0` (tous les jours ouvrables) pour n'avoir que 2 créneaux au lieu de 10.
     static let defaultSlots: [PeakTimeSlot] = [
         PeakTimeSlot(weekday: 0, startHour: 3, startMinute: 0, endHour: 6, endMinute: 0),
         PeakTimeSlot(weekday: 0, startHour: 8, startMinute: 0, endHour: 12, endMinute: 0)
     ]
 
-    /// Determine the current traffic-light state based on the given slots.
+    /// Détermine l'état courant du feu tricolore en fonction des créneaux et du délai orange.
+    ///
+    /// Parcourt les créneaux du jour courant pour déterminer si l'on est :
+    /// - en plein peak (`.red`)
+    /// - dans la fenêtre d'alerte avant un peak (`.orange`)
+    /// - en dehors de tout peak (`.green`)
+    ///
     /// - Parameters:
-    ///   - slots: The list of peak time slots to evaluate against
-    ///   - orangeMinutes: How many minutes before a peak to show orange (default 15)
-    /// - Returns: `.green` if no peak is active or imminent, `.orange` if a peak starts within orangeMinutes, `.red` if currently in a peak
+    ///   - slots: Liste des créneaux peak à évaluer
+    ///   - orangeMinutes: Minutes avant le début d'un peak pour passer en orange (défaut: 15)
+    /// - Returns: L'état du feu correspondant
     static func currentState(slots: [PeakTimeSlot], orangeMinutes: Int = 15) -> FeuState {
         let now = Date()
         let calendar = Calendar.current
@@ -74,9 +90,13 @@ public extension PeakTimeSlot {
 // MARK: - UserDefaults Integration
 
 extension UserDefaults {
+    /// Clé de stockage des créneaux peak dans UserDefaults (encodés en JSON)
     private static let peakTimeSlotsKey = "peakTimeSlots"
+    /// Clé de stockage du délai d'alerte orange en minutes
     private static let orangeMinutesKey = "orangeMinutes"
 
+    /// Liste des créneaux peak sauvegardés, encodée/décodée en JSON.
+    /// Retourne `nil` si aucune donnée n'est présente pour la clé.
     public var peakTimeSlots: [PeakTimeSlot]? {
         get {
             guard let data = data(forKey: Self.peakTimeSlotsKey) else { return nil }
@@ -92,6 +112,7 @@ extension UserDefaults {
         }
     }
 
+    /// Délai d'alerte orange en minutes. Valeur par défaut : 0 (pas d'alerte) si jamais définie.
     public var orangeMinutes: Int {
         get { integer(forKey: Self.orangeMinutesKey) }
         set { set(newValue, forKey: Self.orangeMinutesKey) }

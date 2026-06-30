@@ -2,14 +2,19 @@ import SwiftUI
 
 // MARK: - Time slot helpers (15 min increments)
 
+/// Liste des 96 créneaux de 15 min sur une journée, formatés "HH:MM"
 fileprivate let timeLabels: [String] = (0..<96).map { i in String(format: "%02d:%02d", i/4, (i%4)*15) }
+/// Convertit un index (0–95, par pas de 15 min) en (heure, minute)
 fileprivate func timeSlot(_ idx: Int) -> (hour: Int, min: Int) { (idx/4, (idx%4)*15) }
+/// Convertit (heure, minute) en index dans la liste timeLabels (0–95, borné)
 fileprivate func timeIdx(hour: Int, minute: Int) -> Int {
     min(max(hour * 4 + minute / 15, 0), 95)
 }
 
 // MARK: - Day helpers
 
+/// Paires (label affiché, valeur weekday) pour le sélecteur de jour de semaine.
+/// weekday: 0 = tous les jours (lun-ven), 1 = dimanche, 2 = lundi, …, 7 = samedi
 fileprivate let allDays: [(label: String, value: Int)] = [
     ("Tous les jours", 0),
     ("Lundi",    2), ("Mardi",   3), ("Mercredi", 4),
@@ -17,16 +22,20 @@ fileprivate let allDays: [(label: String, value: Int)] = [
     ("Dimanche", 1)
 ]
 
+/// Retourne le nom du jour lisible correspondant à une valeur weekday
 fileprivate func dayLabel(_ w: Int) -> String {
     allDays.first { $0.value == w }?.label ?? "?"
 }
 
 extension PeakTimeSlot {
+    /// Nom lisible du jour de semaine, ex: "Lundi" ou "Tous les jours"
     var weekdayName: String { dayLabel(weekday) }
+    /// Plage horaire formatée "HH:MM – HH:MM"
     var timeRangeFormatted: String {
         String(format: "%02d:%02d – %02d:%02d", startHour, startMinute, endHour, endMinute)
     }
 }
+/// Largeurs fixes pour aligner les colonnes de la liste de créneaux
 fileprivate let rowHeight: CGFloat   = 28
 fileprivate let delW: CGFloat       = 28   // delete button (24 icon + 4 gap)
 fileprivate let colDay: CGFloat     = 110  // day label
@@ -35,8 +44,13 @@ fileprivate let colDash: CGFloat    = 14   // "–"
 
 // MARK: - Time Picker (Menu-based, fixed width)
 
+/// Sélecteur horaire basé sur un `Menu` avec incréments de 15 minutes.
+/// Affiche l'heure choisie dans un cadre de largeur fixe pour un alignement
+/// cohérent avec le reste de la liste.
 struct MenuTimePicker: View {
+    /// Heure sélectionnée (0–23)
     @Binding var hour: Int
+    /// Minute sélectionnée (0, 15, 30 ou 45)
     @Binding var minute: Int
 
     var body: some View {
@@ -60,7 +74,9 @@ struct MenuTimePicker: View {
     }
 }
 
+/// Sélecteur de jour de semaine basé sur un `Menu`.
 struct MenuDayPicker: View {
+    /// Jour sélectionné (0 = tous les jours, 1 = dimanche, …, 7 = samedi)
     @Binding var weekday: Int
 
     var body: some View {
@@ -80,6 +96,8 @@ struct MenuDayPicker: View {
 
 // MARK: - Read-only slot label (same layout as edit row)
 
+/// Ligne en lecture seule affichant un créneau, avec la même disposition que `EditSlotRow`
+/// pour éviter les sauts visuels au passage en mode édition.
 struct SlotLabel: View {
     let slot: PeakTimeSlot
 
@@ -106,11 +124,18 @@ struct SlotLabel: View {
 
 // MARK: - Add sheet
 
+/// Sheet modale pour ajouter un nouveau créneau peak.
+/// Présente un sélecteur de jour, un sélecteur d'heure de début et de fin,
+/// et les boutons Ajouter/Annuler.
 struct AddSlotSheet: View {
+    /// Heure de début par défaut : 08:00
     @State private var startH = 8; @State private var startM = 0
+    /// Heure de fin par défaut : 12:00
     @State private var endH = 12; @State private var endM = 0
+    /// Jour par défaut : tous les jours
     @State private var weekday = 0
 
+    /// Callback appelé avec le nouveau créneau quand l'utilisateur appuie sur Ajouter
     let onAdd: (PeakTimeSlot) -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -144,11 +169,18 @@ struct AddSlotSheet: View {
 
 // MARK: - Main settings view
 
+/// Vue des préférences : gestion des créneaux peak, délai d'alerte orange,
+/// ajout/suppression/modification de créneaux, et réinitialisation aux valeurs par défaut.
 public struct SettingsView: View {
+    /// Liste des créneaux peak éditée par l'utilisateur
     @State private var slots: [PeakTimeSlot] = []
+    /// Contrôle l'affichage de la sheet d'ajout de créneau
     @State private var showAddSheet = false
+    /// Bascule entre le mode lecture et le mode édition de la liste
     @State private var isEditing = false
+    /// Délai en minutes avant un peak pour déclencher l'alerte orange
     @State private var orangeMinutes: Int = 15
+    /// UserDefaults partagé avec l'icône de barre de statut
     private let defaults = UserDefaults(suiteName: "group.peakmonitor")!
 
     public init() {}
@@ -229,6 +261,8 @@ public struct SettingsView: View {
         }
     }
 
+    /// Charge les créneaux et le délai orange depuis UserDefaults,
+    /// avec fallback sur les valeurs par défaut si rien n'est sauvegardé
     private func load() {
         if let saved = defaults.peakTimeSlots, !saved.isEmpty { slots = saved }
         else { slots = PeakTimeSlot.defaultSlots }
@@ -236,6 +270,8 @@ public struct SettingsView: View {
         orangeMinutes = om > 0 ? om : 15
     }
 
+    /// Persiste les créneaux et le délai orange dans UserDefaults,
+    /// puis envoie une notification distribuée pour informer l'icône de barre de statut
     private func saveAndNotify() {
         defaults.peakTimeSlots = slots
         defaults.orangeMinutes = orangeMinutes
@@ -243,6 +279,7 @@ public struct SettingsView: View {
         DistributedNotificationCenter.default().postNotificationName(NSNotification.Name("PeakTimeSlotsChanged"), object: nil, userInfo: nil, deliverImmediately: true)
     }
 
+    /// Version de l'app lue depuis le bundle, ex: "v1.2.3"
     private var appVersion: String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
         return "v\(v)"
@@ -251,12 +288,22 @@ public struct SettingsView: View {
 
 // MARK: - Edit row
 
+/// Ligne d'édition d'un créneau dans la liste.
+///
+/// Contient un bouton de suppression (cercle rouge), un `MenuDayPicker` pour le jour,
+/// et deux `MenuTimePicker` pour les heures de début et de fin. Les modifications
+/// sont synchronisées immédiatement sur le binding `slot`.
 struct EditSlotRow: View {
+    /// Le créneau édité, modifié en temps réel via les bindings
     @Binding var slot: PeakTimeSlot
+    /// Action déclenchée quand l'utilisateur appuie sur le bouton de suppression
     let onDelete: () -> Void
 
+    /// Copie locale du jour, synchronisée avec `slot.weekday` à l'apparition et via onChange
     @State private var weekday: Int = 0
+    /// Copie locale de l'heure/minutes de début
     @State private var startH = 8; @State private var startM = 0
+    /// Copie locale de l'heure/minutes de fin
     @State private var endH = 12; @State private var endM = 0
 
     var body: some View {
