@@ -1,5 +1,10 @@
 # PeakTimeMonitor — Changelog
 
+## v1.1.0 (30 juin 2026)
+
+### Added
+- Localisation francais/anglais (String Catalog, 40 cles)
+
 ## v1.0.12 (30 juin 2026)
 
 ### Added
