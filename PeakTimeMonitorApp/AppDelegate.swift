@@ -35,6 +35,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Créer la fenêtre manuellement
         createMainWindow()
 
+        // Afficher la fenêtre au lancement
+        openMainWindow()
+
         // Barre de menu
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         updateIcon()
