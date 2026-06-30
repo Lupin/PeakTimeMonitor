@@ -12,11 +12,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let menu = NSMenu()
-        menu.addItem(withTitle: "Afficher", action: #selector(showWindow), keyEquivalent: "")
-        menu.addItem(withTitle: "Préférences", action: #selector(openPrefs), keyEquivalent: ",")
+        let showItem = NSMenuItem(title: "Afficher", action: #selector(showWindow), keyEquivalent: "")
+        showItem.target = self
+        menu.addItem(showItem)
+        let prefsItem = NSMenuItem(title: "Préférences", action: #selector(openPrefs), keyEquivalent: ",")
+        prefsItem.target = self
+        menu.addItem(prefsItem)
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quitter", action: #selector(quitApp), keyEquivalent: "q")
-        for item in menu.items { item.target = self }
+        let quitItem = NSMenuItem(title: "Quitter", action: #selector(quitApp), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
         statusItem.menu = menu
 
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
