@@ -26,18 +26,11 @@ public enum FeuState: String, Equatable {
 }
 
 public extension PeakTimeSlot {
-    /// Paris peak times from COCKPIT: 3h-6h and 8h-12h Paris time
+    /// DeepSeek Paris peak times: 3h-6h and 8h-12h, Monday-Friday
+    /// Uses weekday=0 (all weekdays) so it's just 2 slots instead of 10
     static let defaultSlots: [PeakTimeSlot] = [
-        PeakTimeSlot(weekday: 2, startHour: 3, startMinute: 0, endHour: 6, endMinute: 0),   // Monday 3-6
-        PeakTimeSlot(weekday: 2, startHour: 8, startMinute: 0, endHour: 12, endMinute: 0),  // Monday 8-12
-        PeakTimeSlot(weekday: 3, startHour: 3, startMinute: 0, endHour: 6, endMinute: 0),   // Tuesday 3-6
-        PeakTimeSlot(weekday: 3, startHour: 8, startMinute: 0, endHour: 12, endMinute: 0),  // Tuesday 8-12
-        PeakTimeSlot(weekday: 4, startHour: 3, startMinute: 0, endHour: 6, endMinute: 0),   // Wednesday 3-6
-        PeakTimeSlot(weekday: 4, startHour: 8, startMinute: 0, endHour: 12, endMinute: 0),  // Wednesday 8-12
-        PeakTimeSlot(weekday: 5, startHour: 3, startMinute: 0, endHour: 6, endMinute: 0),   // Thursday 3-6
-        PeakTimeSlot(weekday: 5, startHour: 8, startMinute: 0, endHour: 12, endMinute: 0),  // Thursday 8-12
-        PeakTimeSlot(weekday: 6, startHour: 3, startMinute: 0, endHour: 6, endMinute: 0),   // Friday 3-6
-        PeakTimeSlot(weekday: 6, startHour: 8, startMinute: 0, endHour: 12, endMinute: 0)   // Friday 8-12
+        PeakTimeSlot(weekday: 0, startHour: 3, startMinute: 0, endHour: 6, endMinute: 0),
+        PeakTimeSlot(weekday: 0, startHour: 8, startMinute: 0, endHour: 12, endMinute: 0)
     ]
 
     /// Determine the current traffic-light state based on the given slots.
