@@ -1,5 +1,10 @@
 # PeakTimeMonitor — Changelog
 
+## v1.2.4 (30 June 2026)
+
+### Fixed
+- Time format toggle now instantly refreshes all views (edit + read mode)
+
 ## v1.2.3 (30 June 2026)
 
 ### Fixed
