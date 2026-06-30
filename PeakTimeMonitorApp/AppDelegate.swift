@@ -46,17 +46,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSLog("[PeakTime] openPrefsAction called")
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        // Cherche la fenêtre Settings dans les fenêtres ouvertes
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            for window in NSApp.windows {
-                if window.title.contains("Settings") || window.title.contains("Settings") || window.className.contains("Settings") {
-                    window.makeKeyAndOrderFront(nil)
-                    return
+        // Envoie Cmd+, via le menu de l'application — ça déclenche la scène Settings SwiftUI
+        if let mainMenu = NSApp.mainMenu {
+            let sel = Selector(("showSettingsWindow:"))
+            if let appMenu = mainMenu.items.first?.submenu {
+                for item in appMenu.items {
+                    if item.action == sel || item.action == Selector(("showPreferencesWindow:")) {
+                        NSApp.sendAction(item.action!, to: item.target, from: item)
+                        return
+                    }
                 }
             }
-            // Fallback: ouvre le panneau Settings standard
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
         }
+        // Fallback ultime
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
 
     @objc private func quitAction() {
