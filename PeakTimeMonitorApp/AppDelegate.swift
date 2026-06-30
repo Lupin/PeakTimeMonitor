@@ -9,10 +9,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let button = statusItem.button {
             button.image = makeFeuIcon(state: currentState())
             button.image?.isTemplate = true
-            button.target = self
-            button.action = #selector(toggleWindow)
-            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
+
+        let menu = NSMenu()
+        menu.addItem(withTitle: "Afficher", action: #selector(showWindow), keyEquivalent: "")
+        menu.addItem(withTitle: "Préférences", action: #selector(openPrefs), keyEquivalent: ",")
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Quitter", action: #selector(quitApp), keyEquivalent: "q")
+        for item in menu.items { item.target = self }
+        statusItem.menu = menu
 
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             self?.updateIcon()
@@ -21,85 +26,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        return false
-    }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
-    /// Clic gauche = afficher fenêtre, clic droit = menu contextuel
-    @objc private func toggleWindow() {
-        let event = NSApp.currentEvent
-        if event?.type == .rightMouseUp {
-            showContextMenu()
-        } else {
-            showMainWindow()
-        }
-    }
-
-    @objc private func showMainWindow() {
+    @objc func showWindow() {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         NSApp.windows.first?.makeKeyAndOrderFront(nil)
     }
 
-    private func showContextMenu() {
-        let menu = NSMenu()
-        let showItem = NSMenuItem(title: "Afficher la fenêtre", action: #selector(showMainWindow), keyEquivalent: "")
-        showItem.target = self
-        menu.addItem(showItem)
-        menu.addItem(.separator())
-        let prefsItem = NSMenuItem(title: "Préférences", action: #selector(openPrefs), keyEquivalent: ",")
-        menu.addItem(prefsItem)
-        menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quitter", action: #selector(quitApp), keyEquivalent: "q"))
-
-        for item in menu.items {
-            item.target = self
-        }
-
-        statusItem.menu = menu
-        statusItem.button?.performClick(nil)
-        statusItem.menu = nil
-    }
-
-    @objc private func openPrefs() {
+    @objc func openPrefs() {
         NSApp.activate(ignoringOtherApps: true)
-        let sel = NSSelectorFromString("showSettingsWindow:")
-        if NSApp.responds(to: sel) {
-            NSApp.perform(sel)
+        if NSApp.responds(to: NSSelectorFromString("showSettingsWindow:")) {
+            NSApp.perform(NSSelectorFromString("showSettingsWindow:"))
         }
     }
 
-    @objc private func quitApp() {
-        NSApp.terminate(nil)
-    }
+    @objc func quitApp() { NSApp.terminate(nil) }
 
-    private func updateIcon() {
+    func updateIcon() {
         statusItem.button?.image = makeFeuIcon(state: currentState())
     }
 
-    private func currentState() -> FeuState {
-        let defaults = UserDefaults(suiteName: "group.peakmonitor")
-        let slots = defaults?.peakTimeSlots ?? PeakTimeSlot.defaultSlots
-        let orangeMin = defaults?.integer(forKey: "orangeMinutes") ?? 15
-        return PeakTimeSlot.currentState(slots: slots, orangeMinutes: orangeMin > 0 ? orangeMin : 15)
+    func currentState() -> FeuState {
+        let d = UserDefaults(suiteName: "group.peakmonitor")
+        let slots = d?.peakTimeSlots ?? PeakTimeSlot.defaultSlots
+        let om = d?.integer(forKey: "orangeMinutes") ?? 15
+        return PeakTimeSlot.currentState(slots: slots, orangeMinutes: om > 0 ? om : 15)
     }
 
-    private func makeFeuIcon(state: FeuState) -> NSImage {
-        let size = NSSize(width: 18, height: 18)
-        let image = NSImage(size: size)
-        image.isTemplate = true
-        image.lockFocus()
+    func makeFeuIcon(state: FeuState) -> NSImage {
+        let img = NSImage(size: NSSize(width: 18, height: 18))
+        img.isTemplate = true
+        img.lockFocus()
         let ctx = NSGraphicsContext.current?.cgContext
-        ctx?.clear(CGRect(origin: .zero, size: size))
-        let cx: CGFloat = 9, r: CGFloat = 2.5
-        let cy: [CGFloat] = [13, 9, 5]
-        let fills: [Bool] = [state == .red, state == .orange, state == .green]
+        ctx?.clear(CGRect(x: 0, y: 0, width: 18, height: 18))
+        let cx = 9.0, r = 2.5, cy: [CGFloat] = [13, 9, 5]
+        let fills = [state == .red, state == .orange, state == .green]
         for i in 0..<3 {
-            let rect = CGRect(x: cx - r, y: cy[i] - r, width: r * 2, height: r * 2)
+            let rect = CGRect(x: cx - r, y: cy[i] - r, width: r*2, height: r*2)
             (fills[i] ? NSColor.controlTextColor : NSColor.tertiaryLabelColor).setFill()
             ctx?.fillEllipse(in: rect)
         }
-        image.unlockFocus()
-        return image
+        img.unlockFocus()
+        return img
     }
 }
