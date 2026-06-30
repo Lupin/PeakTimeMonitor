@@ -34,11 +34,15 @@ struct PeakTimeMonitorApp: App {
             Button("Quitter") { NSApp.terminate(nil) }
                 .keyboardShortcut("q", modifiers: .command)
         } label: {
-            HStack(spacing: 1) {
-                Circle().frame(width: 4, height: 4).foregroundColor(state == .red ? .primary : .secondary.opacity(0.3))
-                Circle().frame(width: 4, height: 4).foregroundColor(state == .orange ? .primary : .secondary.opacity(0.3))
-                Circle().frame(width: 4, height: 4).foregroundColor(state == .green ? .primary : .secondary.opacity(0.3))
+            HStack(spacing: 2) {
+                Circle().frame(width: 7, height: 7)
+                    .foregroundColor(state == .red ? .primary : .secondary.opacity(0.25))
+                Circle().frame(width: 7, height: 7)
+                    .foregroundColor(state == .orange ? .primary : .secondary.opacity(0.25))
+                Circle().frame(width: 7, height: 7)
+                    .foregroundColor(state == .green ? .primary : .secondary.opacity(0.25))
             }
+            .padding(.horizontal, 2)
         }
         .menuBarExtraStyle(.menu)
 
