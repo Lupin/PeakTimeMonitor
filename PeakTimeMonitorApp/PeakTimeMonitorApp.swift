@@ -1,43 +1,22 @@
 import SwiftUI
 import AppKit
 
-// MARK: - Mini-feu dessiné en monochrome (template)
-
-struct FeuIconView: NSViewRepresentable {
-    let state: FeuState
-
-    func makeNSView(context: Context) -> NSImageView {
-        let iv = NSImageView()
-        iv.imageScaling = .scaleProportionallyDown
-        return iv
+// Génère l'icône bitmap template pour la barre de menu
+func makeFeuImage(state: FeuState) -> NSImage {
+    let img = NSImage(size: NSSize(width: 16, height: 16))
+    img.isTemplate = true
+    img.lockFocus()
+    let ctx = NSGraphicsContext.current?.cgContext
+    ctx?.clear(CGRect(x: 0, y: 0, width: 16, height: 16))
+    let cx = 8.0, r = 2.5, cy: [CGFloat] = [11.5, 8, 4.5]
+    let fills = [state == .red, state == .orange, state == .green]
+    for i in 0..<3 {
+        let rect = CGRect(x: cx - r, y: cy[i] - r, width: r*2, height: r*2)
+        (fills[i] ? NSColor.labelColor : NSColor.tertiaryLabelColor).setFill()
+        ctx?.fillEllipse(in: rect)
     }
-
-    func updateNSView(_ nsView: NSImageView, context: Context) {
-        nsView.image = makeFeuIcon(state: state)
-    }
-
-    private func makeFeuIcon(state: FeuState) -> NSImage {
-        let img = NSImage(size: NSSize(width: 16, height: 16))
-        img.isTemplate = true
-        img.lockFocus()
-        let ctx = NSGraphicsContext.current?.cgContext
-        ctx?.clear(CGRect(x: 0, y: 0, width: 16, height: 16))
-        let cx = 8.0, r = 2.5, cy: [CGFloat] = [11.5, 8, 4.5]
-        let fills = [state == .red, state == .orange, state == .green]
-        for i in 0..<3 {
-            let rect = CGRect(x: cx - r, y: cy[i] - r, width: r*2, height: r*2)
-            if fills[i] {
-                NSColor.controlAccentColor.setFill()
-                ctx?.fillEllipse(in: rect)
-            }
-            // cercles inactifs : contour discret
-            ctx?.setStrokeColor(NSColor.tertiaryLabelColor.cgColor)
-            ctx?.setLineWidth(0.8)
-            ctx?.strokeEllipse(in: rect)
-        }
-        img.unlockFocus()
-        return img
-    }
+    img.unlockFocus()
+    return img
 }
 
 /// Lit l'état courant
@@ -93,8 +72,7 @@ struct MenuBarExtraScene: Scene {
             Divider()
             Button("Quitter") { NSApp.terminate(nil) }
         } label: {
-            FeuIconView(state: state)
-                .frame(width: 16, height: 16)
+            Image(nsImage: makeFeuImage(state: state))
         }
         .menuBarExtraStyle(.menu)
     }
