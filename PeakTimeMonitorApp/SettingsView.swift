@@ -116,20 +116,35 @@ struct MenuDayPicker: View {
 struct SlotLabel: View {
     let slot: PeakTimeSlot
 
+    // Lit le format depuis UserDefaults comme MenuTimePicker
+    private var use24Hour: Bool {
+        UserDefaults(suiteName: "group.peakmonitor")?.use24Hour ?? true
+    }
+
+    private func timeStr(hour: Int, minute: Int) -> String {
+        if use24Hour {
+            return String(format: "%02d:%02d", hour, minute)
+        } else {
+            let h12 = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour)
+            let ampm = hour < 12 ? String(localized: "AM") : String(localized: "PM")
+            return String(format: "%d:%02d %@", h12, minute, ampm)
+        }
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             // Reserve space for delete button
             Color.clear.frame(width: delW)
             Text(slot.weekdayName)
                 .frame(width: colDay, alignment: .leading)
-            Text(String(format: "%02d:%02d", slot.startHour, slot.startMinute))
+            Text(timeStr(hour: slot.startHour, minute: slot.startMinute))
                 .font(.system(size: 13, design: .monospaced))
                 .frame(width: colTime, alignment: .center)
             Text(String(localized: "–"))
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
                 .frame(width: colDash, alignment: .center)
-            Text(String(format: "%02d:%02d", slot.endHour, slot.endMinute))
+            Text(timeStr(hour: slot.endHour, minute: slot.endMinute))
                 .font(.system(size: 13, design: .monospaced))
                 .frame(width: colTime, alignment: .center)
         }
