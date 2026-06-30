@@ -63,13 +63,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         let menu = NSMenu()
         let t = menuTarget
 
-        let showItem = NSMenuItem(title: "Afficher", action: #selector(MenuTarget.showMainWindow), keyEquivalent: "")
+        let showItem = NSMenuItem(title: String(localized: "Show"), action: #selector(MenuTarget.showMainWindow), keyEquivalent: "")
         showItem.target = t; menu.addItem(showItem)
         menu.addItem(.separator())
-        let prefsItem = NSMenuItem(title: "Préférences", action: #selector(MenuTarget.openPreferences), keyEquivalent: ",")
+        let prefsItem = NSMenuItem(title: String(localized: "Preferences"), action: #selector(MenuTarget.openPreferences), keyEquivalent: ",")
         prefsItem.target = t; menu.addItem(prefsItem)
         menu.addItem(.separator())
-        let quitItem = NSMenuItem(title: "Quitter", action: #selector(MenuTarget.quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: String(localized: "Quit"), action: #selector(MenuTarget.quitApp), keyEquivalent: "q")
         quitItem.target = t; menu.addItem(quitItem)
 
         statusItem.menu = menu
@@ -100,7 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             backing: .buffered,
             defer: false
         )
-        mainWindow?.title = "PeakTimeMonitor"
+        mainWindow?.title = String(localized: "PeakTimeMonitor")
         mainWindow?.isReleasedWhenClosed = false
         mainWindow?.contentView = hostingView
         mainWindow?.center()
@@ -146,7 +146,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                 styleMask: [.titled, .closable, .miniaturizable],
                 backing: .buffered, defer: false
             )
-            settingsWindow?.title = "Préférences"
+            settingsWindow?.title = String(localized: "Preferences")
             settingsWindow?.isReleasedWhenClosed = false
             settingsWindow?.contentView = hostingView
             settingsWindow?.center()

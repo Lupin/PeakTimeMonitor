@@ -16,10 +16,10 @@ fileprivate func timeIdx(hour: Int, minute: Int) -> Int {
 /// Paires (label affiché, valeur weekday) pour le sélecteur de jour de semaine.
 /// weekday: 0 = tous les jours (lun-ven), 1 = dimanche, 2 = lundi, …, 7 = samedi
 fileprivate let allDays: [(label: String, value: Int)] = [
-    ("Tous les jours", 0),
-    ("Lundi",    2), ("Mardi",   3), ("Mercredi", 4),
-    ("Jeudi",    5), ("Vendredi", 6), ("Samedi",  7),
-    ("Dimanche", 1)
+    (String(localized: "All days"), 0),
+    (String(localized: "Monday"),    2), (String(localized: "Tuesday"),   3), (String(localized: "Wednesday"), 4),
+    (String(localized: "Thursday"),    5), (String(localized: "Friday"), 6), (String(localized: "Saturday"),  7),
+    (String(localized: "Sunday"), 1)
 ]
 
 /// Retourne le nom du jour lisible correspondant à une valeur weekday
@@ -110,7 +110,7 @@ struct SlotLabel: View {
             Text(String(format: "%02d:%02d", slot.startHour, slot.startMinute))
                 .font(.system(size: 13, design: .monospaced))
                 .frame(width: colTime, alignment: .center)
-            Text("–")
+            Text(String(localized: "–"))
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
                 .frame(width: colDash, alignment: .center)
@@ -141,19 +141,19 @@ struct AddSlotSheet: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("Ajouter un créneau").font(.headline)
+            Text(String(localized: "Add a slot")).font(.headline)
 
             MenuDayPicker(weekday: $weekday)
 
             HStack(spacing: 6) {
                 MenuTimePicker(hour: $startH, minute: $startM)
-                Text("–").font(.system(size: 14)).foregroundColor(.secondary).frame(width: colDash)
+                Text(String(localized: "–")).font(.system(size: 14)).foregroundColor(.secondary).frame(width: colDash)
                 MenuTimePicker(hour: $endH, minute: $endM)
             }
 
             HStack(spacing: 12) {
-                Button("Annuler") { dismiss() }
-                Button("Ajouter") {
+                Button(String(localized: "Cancel")) { dismiss() }
+                Button(String(localized: "Add")) {
                     onAdd(PeakTimeSlot(weekday: weekday,
                                        startHour: startH, startMinute: startM,
                                        endHour: endH, endMinute: endM))
@@ -188,9 +188,9 @@ public struct SettingsView: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Créneaux Peak").font(.title3).bold()
+                Text(String(localized: "Peak Slots")).font(.title3).bold()
                 Spacer()
-                Button(isEditing ? "Terminé" : "Modifier") {
+                Button(isEditing ? String(localized: "Done") : String(localized: "Edit")) {
                     isEditing.toggle()
                     if !isEditing { saveAndNotify() }
                 }
@@ -199,15 +199,15 @@ public struct SettingsView: View {
 
             // Orange delay setting
             HStack {
-                Text("Alerte orange :").font(.system(size: 12))
+                Text(String(localized: "Orange alert:")).font(.system(size: 12))
                 Picker("", selection: $orangeMinutes) {
-                    Text("5 min").tag(5)
-                    Text("10 min").tag(10)
-                    Text("15 min").tag(15)
-                    Text("20 min").tag(20)
-                    Text("30 min").tag(30)
-                    Text("45 min").tag(45)
-                    Text("60 min").tag(60)
+                    Text(String(localized: "5 min")).tag(5)
+                    Text(String(localized: "10 min")).tag(10)
+                    Text(String(localized: "15 min")).tag(15)
+                    Text(String(localized: "20 min")).tag(20)
+                    Text(String(localized: "30 min")).tag(30)
+                    Text(String(localized: "45 min")).tag(45)
+                    Text(String(localized: "60 min")).tag(60)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
@@ -215,7 +215,7 @@ public struct SettingsView: View {
             }
 
             if slots.isEmpty {
-                Text("Aucun créneau défini.").foregroundColor(.secondary).padding(.vertical, 20)
+                Text(String(localized: "No slots defined.")).foregroundColor(.secondary).padding(.vertical, 20)
             } else {
                 List {
                     ForEach(slots.indices, id: \.self) { i in
@@ -233,12 +233,12 @@ public struct SettingsView: View {
             HStack {
                 if isEditing {
                     Button { showAddSheet = true } label: {
-                        Label("Ajouter", systemImage: "plus")
+                        Label(String(localized: "Add"), systemImage: "plus")
                     }
                     .buttonStyle(.bordered).controlSize(.small)
                 }
                 Spacer()
-                Button("Réinitialiser") {
+                Button(String(localized: "Reset")) {
                     slots = PeakTimeSlot.defaultSlots
                     isEditing = false
                     saveAndNotify()
@@ -247,7 +247,7 @@ public struct SettingsView: View {
             }
 
             // Version
-            Text("PeakTimeMonitor \(appVersion)")
+            Text(String(localized: "PeakTimeMonitor") + " " + appVersion)
                 .font(.system(size: 9))
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -322,7 +322,7 @@ struct EditSlotRow: View {
             Spacer().frame(width: 4)
 
             MenuTimePicker(hour: $startH, minute: $startM)
-            Text("–").font(.system(size: 13)).foregroundColor(.secondary).frame(width: colDash, alignment: .center)
+            Text(String(localized: "–")).font(.system(size: 13)).foregroundColor(.secondary).frame(width: colDash, alignment: .center)
             MenuTimePicker(hour: $endH, minute: $endM)
 
             Spacer()

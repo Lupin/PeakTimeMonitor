@@ -11,7 +11,7 @@ final class FeuViewModel: ObservableObject {
     /// État courant du feu (vert/off-peak, orange/imminent, rouge/actif)
     @Published var state: FeuState = .green
     /// Créneau du prochain peak, formaté "HH:MM–HH:MM" ou "—" si aucun
-    @Published var prochainePlage: String = "—"
+    @Published var prochainePlage: String = String(localized: "—")
     /// Compte à rebours avant le prochain peak, ex: "45 min" ou "1h 30m"
     @Published var compteARebours: String = ""
 
@@ -56,10 +56,20 @@ final class FeuViewModel: ObservableObject {
         var next: PeakTimeSlot?, minD = Int.max
         for s in today { let d = (s.startHour*60+s.startMinute)-cur; if d>0 && d<minD { minD=d; next=s } }
         if let n = next {
-            prochainePlage = String(format:"%02d:%02d–%02d:%02d", n.startHour, n.startMinute, n.endHour, n.endMinute)
-            compteARebours = minD < 60 ? "\(minD) min" : "\(minD/60)h\(minD%60>0 ? " \(minD%60)m" : "")"
+            prochainePlage = String(format: String(localized: "%02d:%02d–%02d:%02d"), n.startHour, n.startMinute, n.endHour, n.endMinute)
+            if minD < 60 {
+                compteARebours = String(localized: "\(minD) min")
+            } else {
+                let h = minD / 60
+                let m = minD % 60
+                if m > 0 {
+                    compteARebours = String(localized: "\(h)h \(m)m")
+                } else {
+                    compteARebours = String(localized: "\(h)h")
+                }
+            }
         } else {
-            prochainePlage = "—"
+            prochainePlage = String(localized: "—")
             compteARebours = ""
         }
     }
@@ -113,7 +123,7 @@ public struct FeuTricoloreView: View {
             HStack(spacing: 3) {
                 Text(vm.prochainePlage).font(.system(size: 9, design: .monospaced))
                 if !vm.compteARebours.isEmpty {
-                    Text("·").font(.system(size: 9)).foregroundColor(.secondary)
+                    Text(String(localized: "·")).font(.system(size: 9)).foregroundColor(.secondary)
                     Text(vm.compteARebours).font(.system(size: 9, design: .monospaced)).foregroundColor(.orange)
                 }
             }
@@ -124,10 +134,22 @@ public struct FeuTricoloreView: View {
         .onAppear { vm.refresh() }
     }
 
-    /// Libellé texte correspondant à l'état actuel (Off-Peak / Peak <15 min / Peak actif)
-    private var etat: String { ["green":"Off-Peak","orange":"Peak <15 min","red":"Peak actif"][vm.state.rawValue] ?? "" }
-    /// Description du tarif (Tarif normal / Préparation / Tarif ×2)
-    private var tarif: String { ["green":"Tarif normal","orange":"Préparation","red":"Tarif ×2"][vm.state.rawValue] ?? "" }
+    /// Libellé texte correspondant à l'état actuel (Off-Peak / Peak imminent / Peak active)
+    private var etat: String {
+        switch vm.state {
+        case .green: return String(localized: "Off-Peak")
+        case .orange: return String(localized: "Peak <15 min")
+        case .red: return String(localized: "Peak active")
+        }
+    }
+    /// Description du tarif (Normal rate / Preparation / Rate ×2)
+    private var tarif: String {
+        switch vm.state {
+        case .green: return String(localized: "Normal rate")
+        case .orange: return String(localized: "Preparation")
+        case .red: return String(localized: "Rate ×2")
+        }
+    }
     /// Couleur du texte d'état, synchronisée avec l'état du feu
     private var couleur: Color { [.green:.green,.orange:.orange,.red:.red][vm.state] ?? .primary }
 }
