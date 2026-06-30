@@ -90,9 +90,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func openPreferences() {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        if NSApp.responds(to: Selector(("showSettingsWindow:"))) {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        // Ouvre les Settings SwiftUI via NSApp (fonctionne dans Xcode et hors Xcode)
+        if let appMenu = NSApp.mainMenu?.item(at: 0)?.submenu {
+            for item in appMenu.items {
+                let sel = item.action
+                if sel == Selector(("showSettingsWindow:")) || sel == Selector(("showPreferencesWindow:")) {
+                    NSApp.sendAction(sel!, to: item.target, from: item)
+                    return
+                }
+            }
         }
+        // Fallback: créer une fenêtre settings manuelle
+        openSettingsFallback()
+    }
+
+    private var settingsWindow: NSWindow?
+    private func openSettingsFallback() {
+        if settingsWindow == nil {
+            let hostingView = NSHostingView(rootView: SettingsView())
+            settingsWindow = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 520, height: 340),
+                styleMask: [.titled, .closable, .miniaturizable],
+                backing: .buffered, defer: false
+            )
+            settingsWindow?.title = "Préférences"
+            settingsWindow?.isReleasedWhenClosed = false
+            settingsWindow?.contentView = hostingView
+            settingsWindow?.center()
+        }
+        settingsWindow?.makeKeyAndOrderFront(nil)
     }
 
     // MARK: - Icon
