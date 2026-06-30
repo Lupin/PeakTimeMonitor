@@ -1,5 +1,10 @@
 # PeakTimeMonitor — Changelog
 
+## v1.2.3 (30 June 2026)
+
+### Fixed
+- Time columns widened to 72px so AM/PM fits on one line
+
 ## v1.2.2 (30 June 2026)
 
 ### Fixed
