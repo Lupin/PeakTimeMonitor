@@ -2,10 +2,9 @@ import SwiftUI
 
 @main
 struct PeakTimeMonitorApp: App {
-    @State private var showSettings = false
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        // Fenêtre principale
         WindowGroup {
             FeuTricoloreView()
                 .frame(minWidth: 135, maxWidth: 150, minHeight: 175, maxHeight: 210)
@@ -13,52 +12,11 @@ struct PeakTimeMonitorApp: App {
         .windowResizability(.contentSize)
         .defaultSize(width: 140, height: 190)
         .windowStyle(.titleBar)
-        .commands {
-            // Raccourci pour les préférences
-            CommandGroup(after: .appSettings) {
-                Button("Préférences") { showSettings = true }
-                    .keyboardShortcut(",", modifiers: .command)
-            }
-        }
 
-        // Icône dans la barre de menu (toujours visible)
-        MenuBarExtra {
-            Button("Afficher la fenêtre") {
-                NSApp.windows.first?.makeKeyAndOrderFront(nil)
-                NSApp.activate(ignoringOtherApps: true)
-            }
-            Divider()
-            Button("Préférences") { showSettings = true }
-                .keyboardShortcut(",", modifiers: .command)
-            Divider()
-            Button("Quitter") { NSApp.terminate(nil) }
-                .keyboardShortcut("q", modifiers: .command)
-        } label: {
-            HStack(spacing: 2) {
-                Circle().frame(width: 7, height: 7)
-                    .foregroundColor(state == .red ? .primary : .secondary.opacity(0.25))
-                Circle().frame(width: 7, height: 7)
-                    .foregroundColor(state == .orange ? .primary : .secondary.opacity(0.25))
-                Circle().frame(width: 7, height: 7)
-                    .foregroundColor(state == .green ? .primary : .secondary.opacity(0.25))
-            }
-            .padding(.horizontal, 2)
-        }
-        .menuBarExtraStyle(.menu)
-
-        // Préférences (Cmd+,)
         Settings {
             SettingsView()
         }
         .windowResizability(.contentSize)
-        .defaultSize(width: 460, height: 360)
-    }
-
-    /// Lit l'état courant pour le mini-feu de la barre de menu
-    private var state: FeuState {
-        let defaults = UserDefaults(suiteName: "group.peakmonitor")
-        let slots = defaults?.peakTimeSlots ?? PeakTimeSlot.defaultSlots
-        let orangeMin = defaults?.integer(forKey: "orangeMinutes") ?? 15
-        return PeakTimeSlot.currentState(slots: slots, orangeMinutes: orangeMin > 0 ? orangeMin : 15)
+        .defaultSize(width: 520, height: 340)
     }
 }
