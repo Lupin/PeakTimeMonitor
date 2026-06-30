@@ -8,13 +8,10 @@ final class MenuTarget: NSObject {
     @objc func showMainWindow() {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        for window in NSApp.windows {
-            if !window.title.contains("Settings"), !window.title.contains("Preferences") {
-                window.makeKeyAndOrderFront(nil)
-                return
-            }
+        // Utilise l'API SwiftUI openWindow pour ouvrir la fenêtre "main"
+        if NSApp.responds(to: Selector(("openWindow:withIdentifier:"))) {
+            NSApp.perform(Selector(("openWindow:withIdentifier:")), with: "main")
         }
-        NSApp.windows.first?.makeKeyAndOrderFront(nil)
     }
 
     @objc func openPreferences() {
