@@ -63,9 +63,15 @@ struct MenuBarExtraScene: Scene {
             Button("Afficher") {
                 NSApp.setActivationPolicy(.regular)
                 NSApp.activate(ignoringOtherApps: true)
-                if let w = NSApp.windows.first(where: { $0.title.isEmpty || $0.title == "PeakTimeMonitor" }) {
-                    w.makeKeyAndOrderFront(nil)
+                // Cherche la fenêtre principale (sans titre)
+                for window in NSApp.windows {
+                    if window.canBecomeKey && !window.isMiniaturized && !(window is NSPanel) {
+                        window.makeKeyAndOrderFront(nil)
+                        return
+                    }
                 }
+                // Si rien trouvé, ouvre toutes les fenêtres
+                NSApp.windows.forEach { $0.makeKeyAndOrderFront(nil) }
             }
             Divider()
             SettingsLink { Text("Préférences") }
