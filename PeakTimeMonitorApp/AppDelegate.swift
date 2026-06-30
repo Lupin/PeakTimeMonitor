@@ -1,27 +1,10 @@
 import Cocoa
 
-/// Handler intermédiaire qui reçoit les actions du menu et les redirige
-private class MenuHandler: NSObject {
-    var onShow: (() -> Void)?
-    var onPrefs: (() -> Void)?
-    var onQuit: (() -> Void)?
-
-    @objc func show() { onShow?() }
-    @objc func prefs() { onPrefs?() }
-    @objc func quit() { onQuit?() }
-}
-
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var timer: Timer?
-    private let menuHandler = MenuHandler()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Configurer les actions via closures
-        menuHandler.onShow = { [weak self] in self?.showWindow() }
-        menuHandler.onPrefs = { [weak self] in self?.openPrefs() }
-        menuHandler.onQuit = { NSApp.terminate(nil) }
-
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
             button.image = makeFeuIcon(state: currentState())
@@ -29,34 +12,59 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Afficher", action: #selector(MenuHandler.show), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Préférences", action: #selector(MenuHandler.prefs), keyEquivalent: ","))
+        menu.addItem(NSMenuItem(title: "Afficher", action: #selector(showWindowAction), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Préférences", action: #selector(openPrefsAction), keyEquivalent: ","))
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quitter", action: #selector(MenuHandler.quit), keyEquivalent: "q"))
-        menu.items.forEach { $0.target = menuHandler }
+        menu.addItem(NSMenuItem(title: "Quitter", action: #selector(quitAction), keyEquivalent: "q"))
+        // Target = self (AppDelegate), retained by NSApplicationDelegateAdaptor
+        menu.items.forEach { $0.target = self }
         statusItem.menu = menu
 
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             self?.updateIcon()
         }
 
-        NSApp.setActivationPolicy(.regular)
+        // Start as accessory (no Dock icon) until user opens window
+        NSApp.setActivationPolicy(.accessory)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
-    private func showWindow() {
+    // MARK: - Menu actions
+
+    @objc private func showWindowAction() {
+        NSLog("[PeakTime] showWindowAction — windows: %d", NSApp.windows.count)
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        NSApp.windows.first?.makeKeyAndOrderFront(nil)
+        if let w = NSApp.windows.first {
+            w.makeKeyAndOrderFront(nil)
+        }
+        // If no window exists, SwiftUI WindowGroup will create one when app becomes active
     }
 
-    private func openPrefs() {
+    @objc private func openPrefsAction() {
+        NSLog("[PeakTime] openPrefsAction called")
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        if NSApp.responds(to: NSSelectorFromString("showSettingsWindow:")) {
-            NSApp.perform(NSSelectorFromString("showSettingsWindow:"))
+        // Cherche la fenêtre Settings dans les fenêtres ouvertes
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            for window in NSApp.windows {
+                if window.title.contains("Settings") || window.title.contains("Settings") || window.className.contains("Settings") {
+                    window.makeKeyAndOrderFront(nil)
+                    return
+                }
+            }
+            // Fallback: ouvre le panneau Settings standard
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
         }
     }
+
+    @objc private func quitAction() {
+        NSLog("[PeakTime] quitAction called")
+        NSApp.terminate(nil)
+    }
+
+    // MARK: - Icon update
 
     private func updateIcon() {
         statusItem.button?.image = makeFeuIcon(state: currentState())
