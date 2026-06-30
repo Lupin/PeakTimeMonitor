@@ -1,8 +1,8 @@
 # PeakTimeMonitor — Changelog
 
-## v1.0.0 (30 juin 2026)
+## v1.0.12 (30 juin 2026)
 
-### Première version
+### Première release publique
 
 - 🚦 Fenêtre compacte 140×190 avec feu tricolore animé (vert/orange/rouge)
 - 📌 Icône barre de menu avec 3 cercles monochromes (template)
@@ -14,3 +14,5 @@
 - 🖤 Support thème clair/sombre/monochrome natif
 - 📱 Format DMG pour distribution facile
 - 🔧 Build autosuffisant via `build.sh` (XcodeGen + xcodebuild)
+- 📝 Code entièrement documenté (152 commentaires /// DocC)
+- 🪪 Version affichée dans les préférences (lue depuis Info.plist)
