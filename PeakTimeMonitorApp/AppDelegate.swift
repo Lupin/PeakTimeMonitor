@@ -1,53 +1,75 @@
 import Cocoa
-import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var timer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Créer l'icône dans la barre de menu
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
             button.image = makeFeuIcon(state: currentState())
             button.image?.isTemplate = true
-            button.action = #selector(statusBarClicked)
-            button.target = self
         }
 
-        // Menu contextuel
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Afficher la fenêtre", action: #selector(showWindow), keyEquivalent: ""))
+
+        let showItem = NSMenuItem(title: "Afficher la fenêtre", action: nil, keyEquivalent: "")
+        showItem.target = self
+        showItem.action = #selector(showWindow)
+        menu.addItem(showItem)
+
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Préférences", action: #selector(openSettings), keyEquivalent: ","))
+
+        let prefsItem = NSMenuItem(title: "Préférences", action: nil, keyEquivalent: ",")
+        prefsItem.target = self
+        prefsItem.action = #selector(openPrefs)
+        menu.addItem(prefsItem)
+
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quitter", action: #selector(quit), keyEquivalent: "q"))
+
+        let quitItem = NSMenuItem(title: "Quitter", action: nil, keyEquivalent: "q")
+        quitItem.target = self
+        quitItem.action = #selector(quitApp)
+        menu.addItem(quitItem)
+
         statusItem.menu = menu
 
-        // Timer de rafraîchissement de l'icône
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             self?.updateIcon()
         }
+
+        // Empêcher l'app de quitter quand la fenêtre est fermée
+        NSApp.setActivationPolicy(.regular)
     }
 
-    @objc private func statusBarClicked() {
-        NSApp.activate(ignoringOtherApps: true)
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return false // Rester actif dans la barre de menu
     }
 
     @objc private func showWindow() {
-        NSApp.windows.first?.makeKeyAndOrderFront(nil)
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-    }
-
-    @objc private func openSettings() {
-        if #available(macOS 14.0, *) {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        if let window = NSApp.windows.first(where: { $0.isVisible || $0.title.contains("Peak") }) {
+            window.makeKeyAndOrderFront(nil)
         } else {
-            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+            // Si la fenêtre n'existe pas encore, on la recrée via le WindowGroup
+            NSApp.windows.first?.makeKeyAndOrderFront(nil)
         }
     }
 
-    @objc private func quit() {
+    @objc private func openPrefs() {
+        NSApp.activate(ignoringOtherApps: true)
+        // Ouvre les Settings via la commande standard
+        if #available(macOS 14.0, *) {
+            // macOS 14+ : Settings
+            let sel = NSSelectorFromString("showSettingsWindow:")
+            if NSApp.responds(to: sel) {
+                NSApp.perform(sel)
+            }
+        }
+    }
+
+    @objc private func quitApp() {
         NSApp.terminate(nil)
     }
 
@@ -62,39 +84,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return PeakTimeSlot.currentState(slots: slots, orangeMinutes: orangeMin > 0 ? orangeMin : 15)
     }
 
-    /// Dessine un mini-feu tricolore monochrome (3 cercles) dans une image 18×18
     private func makeFeuIcon(state: FeuState) -> NSImage {
         let size = NSSize(width: 18, height: 18)
         let image = NSImage(size: size)
         image.isTemplate = true
-
         image.lockFocus()
         let ctx = NSGraphicsContext.current?.cgContext
-
-        // Fond transparent
         ctx?.clear(CGRect(origin: .zero, size: size))
-
-        // Positions des 3 cercles
-        let cx: CGFloat = 9
-        let cy: [CGFloat] = [13, 9, 5] // rouge en haut, orange milieu, vert en bas
-        let r: CGFloat = 2.5
-
-        let isTop:    Bool = state == .red
-        let isMiddle: Bool = state == .orange
-        let isBottom: Bool = state == .green
-
-        let fills: [Bool] = [isTop, isMiddle, isBottom]
-
+        let cx: CGFloat = 9, r: CGFloat = 2.5
+        let cy: [CGFloat] = [13, 9, 5]
+        let fills: [Bool] = [state == .red, state == .orange, state == .green]
         for i in 0..<3 {
             let rect = CGRect(x: cx - r, y: cy[i] - r, width: r * 2, height: r * 2)
-            if fills[i] {
-                NSColor.controlTextColor.setFill()
-            } else {
-                NSColor.tertiaryLabelColor.setFill()
-            }
+            (fills[i] ? NSColor.controlTextColor : NSColor.tertiaryLabelColor).setFill()
             ctx?.fillEllipse(in: rect)
         }
-
         image.unlockFocus()
         return image
     }
