@@ -1,5 +1,11 @@
 # PeakTimeMonitor — Changelog
 
+## v1.2.0 (30 June 2026)
+
+### Added
+- Customizable label above traffic light (default "DeepSeek", editable in preferences)
+- Time format toggle: 24h or 12h (AM/PM) in preferences
+
 ## v1.1.1 (30 June 2026)
 
 ### Added

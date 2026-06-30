@@ -180,6 +180,10 @@ public struct SettingsView: View {
     @State private var isEditing = false
     /// Délai en minutes avant un peak pour déclencher l'alerte orange
     @State private var orangeMinutes: Int = 15
+    /// Label personnalisé affiché au-dessus du feu
+    @State private var peakLabel: String = "DeepSeek"
+    /// Format d'heure : true = 24h, false = 12h (AM/PM)
+    @State private var use24Hour: Bool = true
     /// UserDefaults partagé avec l'icône de barre de statut
     private let defaults = UserDefaults(suiteName: "group.peakmonitor")!
 
@@ -195,6 +199,28 @@ public struct SettingsView: View {
                     if !isEditing { saveAndNotify() }
                 }
                 .buttonStyle(.bordered).controlSize(.small)
+            }
+
+            // Label personnalisé
+            HStack {
+                Text(String(localized: "Label:")).font(.system(size: 12))
+                TextField(String(localized: "Enter label"), text: $peakLabel)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 150)
+                    .onSubmit { saveAndNotify() }
+            }
+
+            // Format d'heure 24h / 12h
+            HStack {
+                Text(String(localized: "Time format:")).font(.system(size: 12))
+                Picker("", selection: $use24Hour) {
+                    Text(String(localized: "24h")).tag(true)
+                    Text(String(localized: "12h (AM/PM)")).tag(false)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 160)
+                .onChange(of: use24Hour) { _, _ in saveAndNotify() }
             }
 
             // Orange delay setting
@@ -253,7 +279,7 @@ public struct SettingsView: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .padding()
-        .frame(minWidth: 540, minHeight: 340)
+        .frame(minWidth: 540, minHeight: 420)
         .onAppear(perform: load)
         .onDisappear { if isEditing { isEditing = false; saveAndNotify() } }
         .sheet(isPresented: $showAddSheet) {
@@ -268,6 +294,8 @@ public struct SettingsView: View {
         else { slots = PeakTimeSlot.defaultSlots }
         let om = defaults.orangeMinutes
         orangeMinutes = om > 0 ? om : 15
+        peakLabel = defaults.peakLabel
+        use24Hour = defaults.use24Hour
     }
 
     /// Persiste les créneaux et le délai orange dans UserDefaults,
@@ -275,6 +303,8 @@ public struct SettingsView: View {
     private func saveAndNotify() {
         defaults.peakTimeSlots = slots
         defaults.orangeMinutes = orangeMinutes
+        defaults.peakLabel = peakLabel
+        defaults.use24Hour = use24Hour
         defaults.synchronize()
         DistributedNotificationCenter.default().postNotificationName(NSNotification.Name("PeakTimeSlotsChanged"), object: nil, userInfo: nil, deliverImmediately: true)
     }

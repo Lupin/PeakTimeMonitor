@@ -94,6 +94,10 @@ extension UserDefaults {
     private static let peakTimeSlotsKey = "peakTimeSlots"
     /// Clé de stockage du délai d'alerte orange en minutes
     private static let orangeMinutesKey = "orangeMinutes"
+    /// Clé de stockage du label personnalisé
+    private static let peakLabelKey = "peakLabel"
+    /// Clé de stockage du format horaire (24h ou 12h)
+    private static let use24HourKey = "use24Hour"
 
     /// Liste des créneaux peak sauvegardés, encodée/décodée en JSON.
     /// Retourne `nil` si aucune donnée n'est présente pour la clé.
@@ -116,5 +120,20 @@ extension UserDefaults {
     public var orangeMinutes: Int {
         get { integer(forKey: Self.orangeMinutesKey) }
         set { set(newValue, forKey: Self.orangeMinutesKey) }
+    }
+
+    /// Label personnalisé affiché au-dessus du feu tricolore. Défaut: "DeepSeek".
+    public var peakLabel: String {
+        get { string(forKey: Self.peakLabelKey) ?? "DeepSeek" }
+        set { set(newValue, forKey: Self.peakLabelKey) }
+    }
+
+    /// Format d'heure : `true` = 24h, `false` = 12h (AM/PM). Défaut: `true`.
+    public var use24Hour: Bool {
+        get {
+            if object(forKey: Self.use24HourKey) == nil { return true }
+            return bool(forKey: Self.use24HourKey)
+        }
+        set { set(newValue, forKey: Self.use24HourKey) }
     }
 }

@@ -10,10 +10,12 @@ import Combine
 final class FeuViewModel: ObservableObject {
     /// État courant du feu (vert/off-peak, orange/imminent, rouge/actif)
     @Published var state: FeuState = .green
-    /// Créneau du prochain peak, formaté "HH:MM–HH:MM" ou "—" si aucun
+    /// Créneau du prochain peak, formaté selon le format configuré
     @Published var prochainePlage: String = String(localized: "—")
     /// Compte à rebours avant le prochain peak, ex: "45 min" ou "1h 30m"
     @Published var compteARebours: String = ""
+    /// Label personnalisé au-dessus du feu
+    @Published var peakLabel: String = "DeepSeek"
 
     /// UserDefaults partagé entre l'app principale et l'extension de barre de statut
     private let defaults = UserDefaults(suiteName: "group.peakmonitor")!
@@ -46,6 +48,8 @@ final class FeuViewModel: ObservableObject {
         defaults.synchronize()
         let slots = defaults.peakTimeSlots ?? PeakTimeSlot.defaultSlots
         let orangeMin = defaults.orangeMinutes
+        let use24 = defaults.use24Hour
+        peakLabel = defaults.peakLabel
         state = PeakTimeSlot.currentState(slots: slots, orangeMinutes: orangeMin)
         let now = Date()
         let cal = Calendar.current
@@ -56,7 +60,7 @@ final class FeuViewModel: ObservableObject {
         var next: PeakTimeSlot?, minD = Int.max
         for s in today { let d = (s.startHour*60+s.startMinute)-cur; if d>0 && d<minD { minD=d; next=s } }
         if let n = next {
-            prochainePlage = String(format: String(localized: "%02d:%02d–%02d:%02d"), n.startHour, n.startMinute, n.endHour, n.endMinute)
+            prochainePlage = timeRangeString(startHour: n.startHour, startMinute: n.startMinute, endHour: n.endHour, endMinute: n.endMinute, use24: use24)
             if minD < 60 {
                 compteARebours = String(localized: "\(minD) min")
             } else {
@@ -107,6 +111,15 @@ public struct FeuTricoloreView: View {
 
     public var body: some View {
         VStack(spacing: 4) {
+            // Label personnalisé au-dessus du feu
+            Text(vm.peakLabel)
+                .font(.system(size: 9))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .frame(maxWidth: 120)
+                .truncationMode(.tail)
+                .padding(.bottom, 2)
+
             VStack(spacing: 4) {
                 CercleFeu(color: .red, isActive: vm.state == .red)
                 CercleFeu(color: .orange, isActive: vm.state == .orange)
@@ -152,6 +165,27 @@ public struct FeuTricoloreView: View {
     }
     /// Couleur du texte d'état, synchronisée avec l'état du feu
     private var couleur: Color { [.green:.green,.orange:.orange,.red:.red][vm.state] ?? .primary }
+}
+
+/// Formatte une heure en mode 24h ou 12h (AM/PM).
+/// - 24h : "03:00"
+/// - 12h : "3:00 AM"
+fileprivate func formatTime(hour: Int, minute: Int, use24: Bool) -> String {
+    if use24 {
+        return String(format: "%02d:%02d", hour, minute)
+    }
+    let h12 = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour)
+    let ampm = hour < 12 ? String(localized: "AM") : String(localized: "PM")
+    return String(format: "%d:%02d %@", h12, minute, ampm)
+}
+
+/// Formatte une plage horaire en mode 24h ou 12h.
+/// - 24h : "03:00–06:00"
+/// - 12h : "3:00 AM–6:00 AM"
+fileprivate func timeRangeString(startHour: Int, startMinute: Int, endHour: Int, endMinute: Int, use24: Bool) -> String {
+    let start = formatTime(hour: startHour, minute: startMinute, use24: use24)
+    let end = formatTime(hour: endHour, minute: endMinute, use24: use24)
+    return "\(start)–\(end)"
 }
 
 #if DEBUG
