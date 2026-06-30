@@ -1,43 +1,9 @@
 import Cocoa
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var statusItem: NSStatusItem!
-    private var timer: Timer?
-
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.regular)
-
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        updateIcon()
-
-        let menu = NSMenu()
-
-        let showItem = NSMenuItem(title: "Afficher", action: #selector(showMainWindow), keyEquivalent: "")
-        showItem.target = self
-        menu.addItem(showItem)
-
-        menu.addItem(.separator())
-
-        let prefsItem = NSMenuItem(title: "Préférences", action: #selector(openPreferences), keyEquivalent: ",")
-        prefsItem.target = self
-        menu.addItem(prefsItem)
-
-        menu.addItem(.separator())
-
-        let quitItem = NSMenuItem(title: "Quitter", action: #selector(terminate), keyEquivalent: "q")
-        quitItem.target = self
-        menu.addItem(quitItem)
-
-        statusItem.menu = menu
-
-        timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-            self?.updateIcon()
-        }
-    }
-
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
-
-    // MARK: - Actions
+/// Objet target pour le NSMenu — séparé de l'AppDelegate pour garantir
+/// qu'il est dans la responder chain. Stocké en static pour ne jamais être libéré.
+final class MenuTarget: NSObject {
+    static let shared = MenuTarget()
 
     @objc func showMainWindow() {
         NSApp.setActivationPolicy(.regular)
@@ -54,26 +20,71 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func openPreferences() {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        if NSApp.responds(to: Selector(("showSettingsWindow:"))) {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        // Ouvre via le menu application standard
+        if let appMenu = NSApp.mainMenu?.items.first?.submenu {
+            for item in appMenu.items {
+                if item.action == Selector(("showSettingsWindow:")) || item.keyEquivalent == "," {
+                    NSApp.sendAction(item.action!, to: item.target, from: item)
+                    return
+                }
+            }
+        }
+        // Fallback
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+    }
+
+    @objc func quitApp() {
+        NSApp.terminate(nil)
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var statusItem: NSStatusItem!
+    private var timer: Timer?
+    private let menuTarget = MenuTarget.shared
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.regular)
+
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        updateIcon()
+
+        let menu = NSMenu()
+        let t = menuTarget
+
+        let showItem = NSMenuItem(title: "Afficher", action: #selector(MenuTarget.showMainWindow), keyEquivalent: "")
+        showItem.target = t
+        menu.addItem(showItem)
+
+        menu.addItem(.separator())
+
+        let prefsItem = NSMenuItem(title: "Préférences", action: #selector(MenuTarget.openPreferences), keyEquivalent: ",")
+        prefsItem.target = t
+        menu.addItem(prefsItem)
+
+        menu.addItem(.separator())
+
+        let quitItem = NSMenuItem(title: "Quitter", action: #selector(MenuTarget.quitApp), keyEquivalent: "q")
+        quitItem.target = t
+        menu.addItem(quitItem)
+
+        // Empêcher l'auto-terminaison du menu
+        menu.autoenablesItems = false
+        statusItem.menu = menu
+
+        timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            self?.updateIcon()
         }
     }
 
-    @objc func terminate() {
-        NSApp.terminate(nil)
-    }
-
-    // MARK: - Icon
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     func updateIcon() {
-        statusItem.button?.image = AppDelegate.makeFeuIcon(state: currentState())
-    }
-
-    private func currentState() -> FeuState {
         let d = UserDefaults(suiteName: "group.peakmonitor")
         let slots = d?.peakTimeSlots ?? PeakTimeSlot.defaultSlots
         let om = d?.integer(forKey: "orangeMinutes") ?? 15
-        return PeakTimeSlot.currentState(slots: slots, orangeMinutes: om > 0 ? om : 15)
+        let state = PeakTimeSlot.currentState(slots: slots, orangeMinutes: om > 0 ? om : 15)
+        statusItem.button?.image = Self.makeFeuIcon(state: state)
     }
 
     static func makeFeuIcon(state: FeuState) -> NSImage {
