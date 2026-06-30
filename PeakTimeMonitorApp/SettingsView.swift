@@ -213,6 +213,12 @@ public struct SettingsView: View {
                 }
                 .buttonStyle(.bordered).tint(.orange).controlSize(.small)
             }
+
+            // Version
+            Text("PeakTimeMonitor v1.0")
+                .font(.system(size: 9))
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .padding()
         .frame(minWidth: 540, minHeight: 340)
