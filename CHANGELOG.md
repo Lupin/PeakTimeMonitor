@@ -1,5 +1,15 @@
 # PeakTimeMonitor — Changelog
 
+## v1.2.2 (30 June 2026)
+
+### Fixed
+- Time pickers now respect 12h (AM/PM) format both in edit and read mode
+
+## v1.2.1 (30 June 2026)
+
+### Fixed
+- Time picker dropdown adapted to selected format (12h or 24h)
+
 ## v1.2.0 (30 June 2026)
 
 ### Added
