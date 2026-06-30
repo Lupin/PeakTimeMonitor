@@ -1,5 +1,10 @@
 # PeakTimeMonitor — Changelog
 
+## v1.1.1 (30 juin 2026)
+
+### Added
+- 6 nouvelles langues : japonais, chinois simplifie, coreen, russe, espagnol, allemand
+
 ## v1.1.0 (30 juin 2026)
 
 ### Added
