@@ -50,11 +50,7 @@ fileprivate let colDash: CGFloat    = 14   // "–"
 struct MenuTimePicker: View {
     @Binding var hour: Int
     @Binding var minute: Int
-
-    /// Lit le format depuis UserDefaults (App Group)
-    private var use24Hour: Bool {
-        UserDefaults(suiteName: "group.peakmonitor")?.use24Hour ?? true
-    }
+    let use24Hour: Bool
 
     /// Génère le label d'une tranche horaire selon le format 24h/12h
     private func labelFor(_ i: Int) -> String {
@@ -115,11 +111,7 @@ struct MenuDayPicker: View {
 /// pour éviter les sauts visuels au passage en mode édition.
 struct SlotLabel: View {
     let slot: PeakTimeSlot
-
-    // Lit le format depuis UserDefaults comme MenuTimePicker
-    private var use24Hour: Bool {
-        UserDefaults(suiteName: "group.peakmonitor")?.use24Hour ?? true
-    }
+    let use24Hour: Bool
 
     private func timeStr(hour: Int, minute: Int) -> String {
         if use24Hour {
@@ -158,14 +150,10 @@ struct SlotLabel: View {
 /// Présente un sélecteur de jour, un sélecteur d'heure de début et de fin,
 /// et les boutons Ajouter/Annuler.
 struct AddSlotSheet: View {
-    /// Heure de début par défaut : 08:00
     @State private var startH = 8; @State private var startM = 0
-    /// Heure de fin par défaut : 12:00
     @State private var endH = 12; @State private var endM = 0
-    /// Jour par défaut : tous les jours
     @State private var weekday = 0
-
-    /// Callback appelé avec le nouveau créneau quand l'utilisateur appuie sur Ajouter
+    let use24Hour: Bool
     let onAdd: (PeakTimeSlot) -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -176,9 +164,9 @@ struct AddSlotSheet: View {
             MenuDayPicker(weekday: $weekday)
 
             HStack(spacing: 6) {
-                MenuTimePicker(hour: $startH, minute: $startM)
+                MenuTimePicker(hour: $startH, minute: $startM, use24Hour: use24Hour)
                 Text(String(localized: "–")).font(.system(size: 14)).foregroundColor(.secondary).frame(width: colDash)
-                MenuTimePicker(hour: $endH, minute: $endM)
+                MenuTimePicker(hour: $endH, minute: $endM, use24Hour: use24Hour)
             }
 
             HStack(spacing: 12) {
@@ -276,9 +264,9 @@ public struct SettingsView: View {
                 List {
                     ForEach(slots.indices, id: \.self) { i in
                         if isEditing {
-                            EditSlotRow(slot: $slots[i]) { slots.remove(at: i) }
+                            EditSlotRow(slot: $slots[i], onDelete: { slots.remove(at: i) }, use24Hour: use24Hour)
                         } else {
-                            SlotLabel(slot: slots[i])
+                            SlotLabel(slot: slots[i], use24Hour: use24Hour)
                         }
                     }
                 }
@@ -313,7 +301,7 @@ public struct SettingsView: View {
         .onAppear(perform: load)
         .onDisappear { if isEditing { isEditing = false; saveAndNotify() } }
         .sheet(isPresented: $showAddSheet) {
-            AddSlotSheet { s in slots.append(s); saveAndNotify() }
+            AddSlotSheet(use24Hour: use24Hour) { s in slots.append(s); saveAndNotify() }
         }
     }
 
@@ -356,8 +344,8 @@ public struct SettingsView: View {
 struct EditSlotRow: View {
     /// Le créneau édité, modifié en temps réel via les bindings
     @Binding var slot: PeakTimeSlot
-    /// Action déclenchée quand l'utilisateur appuie sur le bouton de suppression
     let onDelete: () -> Void
+    let use24Hour: Bool
 
     /// Copie locale du jour, synchronisée avec `slot.weekday` à l'apparition et via onChange
     @State private var weekday: Int = 0
@@ -381,9 +369,9 @@ struct EditSlotRow: View {
 
             Spacer().frame(width: 4)
 
-            MenuTimePicker(hour: $startH, minute: $startM)
+            MenuTimePicker(hour: $startH, minute: $startM, use24Hour: use24Hour)
             Text(String(localized: "–")).font(.system(size: 13)).foregroundColor(.secondary).frame(width: colDash, alignment: .center)
-            MenuTimePicker(hour: $endH, minute: $endM)
+            MenuTimePicker(hour: $endH, minute: $endM, use24Hour: use24Hour)
 
             Spacer()
         }
