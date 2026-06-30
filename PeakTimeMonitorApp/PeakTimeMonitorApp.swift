@@ -63,15 +63,16 @@ struct MenuBarExtraScene: Scene {
             Button("Afficher") {
                 NSApp.setActivationPolicy(.regular)
                 NSApp.activate(ignoringOtherApps: true)
-                // Cherche la fenêtre principale (sans titre)
+                // Cherche la fenêtre principale (pas les Settings)
                 for window in NSApp.windows {
-                    if window.canBecomeKey && !window.isMiniaturized && !(window is NSPanel) {
+                    let t = window.title
+                    if !t.contains("Settings") && !t.contains("Preferences") {
                         window.makeKeyAndOrderFront(nil)
                         return
                     }
                 }
-                // Si rien trouvé, ouvre toutes les fenêtres
-                NSApp.windows.forEach { $0.makeKeyAndOrderFront(nil) }
+                // Fallback
+                NSApp.windows.first?.makeKeyAndOrderFront(nil)
             }
             Divider()
             SettingsLink { Text("Préférences") }
